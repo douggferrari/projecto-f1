@@ -152,12 +152,13 @@ export function Sede() {
             );
           })}
         </div>
-        {estado!.ofertaPendente && (
-          <p className="mt-3 rounded border border-acento/40 bg-acento/10 p-2 text-sm">
-            Contratação pendente: <strong>{estado!.pilotos[estado!.ofertaPendente.pilotoId].nome}</strong> chega
-            na próxima temporada (rescisão paga: <span className="num">{formatarDinheiro(estado!.ofertaPendente.custoRescisao)}</span>).
+        {estado!.poachesPendentes.map((p) => (
+          <p key={p.pilotoId} className="mt-3 rounded border border-acento/40 bg-acento/10 p-2 text-sm">
+            Contratação pendente: <strong>{estado!.pilotos[p.pilotoId].nome}</strong> assume o assento{' '}
+            {p.slot + 1} <strong>nesta temporada</strong> ao confirmar a pré-temporada (rescisão
+            reservada: <span className="num">{formatarDinheiro(p.custoRescisao)}</span> — cancelável no Mercado).
           </p>
-        )}
+        ))}
       </Card>
     </div>
   );

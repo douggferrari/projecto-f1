@@ -62,10 +62,17 @@ function EscritorioPreTemporada() {
         };
       }
     }
+    // Poaches pendentes da janela: o salário do poacheado já pesa no orçamento
+    for (const poach of estado!.poachesPendentes) {
+      eq.pilotos[poach.slot] = {
+        pilotoId: poach.pilotoId, duracaoAnos: poach.duracaoAnos,
+        salarioAnual: poach.salarioAnual, anoInicio: ano,
+      };
+    }
     eq.patrocinadorId = patrocinadorId;
     return eq;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jogador, motorSel, pilotosSel, patrocinadorId, ano]);
+  }, [jogador, motorSel, pilotosSel, patrocinadorId, ano, estado]);
 
   const orcamento = validarOrcamento(
     previa, CATALOGO.patrocinadores, premiacao, investimento + estado!.custoRescisaoAno
@@ -134,9 +141,17 @@ function EscritorioPreTemporada() {
           const vigente = contratoVigente(contrato, ano);
           const sel = pilotosSel[slot];
           const pilotoAtual = estado!.pilotos[contrato.pilotoId];
+          const poachDoSlot = estado!.poachesPendentes.find((p) => p.slot === slot);
           return (
             <Card key={slot} titulo={`Piloto ${slot + 1}`}>
-              {vigente ? (
+              {poachDoSlot ? (
+                <p className="rounded border border-acento/40 bg-acento/10 p-3 text-sm">
+                  Reservado para <strong>{estado!.pilotos[poachDoSlot.pilotoId].nome}</strong> (contratação
+                  da janela): assume este assento <strong>nesta temporada</strong> ao confirmar
+                  {vigente && <> — {pilotoAtual.nome} será liberado</>}.
+                  Para mudar, cancele a pendência no Mercado.
+                </p>
+              ) : vigente ? (
                 <InfoContrato
                   nome={`${pilotoAtual.nome} · ${pilotoAtual.idade} anos`}
                   detalhe={`quali ${Math.round(pilotoAtual.classificacao)} · corrida ${Math.round(pilotoAtual.corrida)} · conf ${Math.round(pilotoAtual.confiabilidade)}`}

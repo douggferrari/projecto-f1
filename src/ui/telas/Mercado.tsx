@@ -1,13 +1,13 @@
 // ============================================================================
-// Mercado de pilotos — Fase 4.
-// Lista todo o grid + pilotos livres com idade, categoria, fase de carreira,
-// reputação e salário exigido. Permite ofertar a pilotos CONTRATADOS de
-// outras equipes (poach): rescisão paga agora, piloto chega no ano seguinte.
-// Pilotos livres são contratados nos assentos vagos, no Escritório.
+// Mercado de pilotos — JANELA de pré-temporada (redesign).
+// Navegar/scoutar é permitido sempre; OFERTAS só na pré-temporada.
+// Poach tem efeito IMEDIATO: o piloto entra no assento escolhido (vago ou
+// substituindo o atual, que é liberado) JÁ na temporada em montagem. A
+// pendência é cancelável (estorno) até confirmar a pré-temporada.
 // ============================================================================
 
 import { useMemo, useState } from 'react';
-import { anosRestantes } from '../../engine/contratos';
+import { anosRestantes, contratoVigente } from '../../engine/contratos';
 import { equipeDoPiloto, interessePiloto, validarPoach } from '../../engine/mercado';
 import { overallAtual, salarioExigido } from '../../engine/pilotoCarreira';
 import type { Piloto } from '../../engine/tipos';
@@ -18,8 +18,9 @@ import { nomeEquipe } from '../nomes';
 import { Botao, Card, CategoriaBadge, CorEquipe, FaseBadge } from '../componentes';
 
 export function Mercado() {
-  const { estado, fazerPoach, ultimaDecisaoMercado } = useJogo();
+  const { estado, fazerPoach, cancelarPoach, ultimaDecisaoMercado } = useJogo();
   const jogador = estado!.equipes.find((e) => e.ehJogador)!;
+  const janelaAberta = estado!.fase === 'pre-temporada';
 
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [fatorSalario, setFatorSalario] = useState(1.2);
@@ -50,6 +51,26 @@ export function Mercado() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="flex flex-col gap-4">
+        {!janelaAberta && (
+          <div className="rounded border border-alerta/40 bg-alerta/10 p-3 text-sm text-alerta">
+            Mercado fechado — reabre na próxima pré-temporada. Você pode scoutar à vontade;
+            ofertas só na janela.
+          </div>
+        )}
+        {estado!.poachesPendentes.map((p) => (
+          <div key={p.pilotoId} className="flex items-center gap-3 rounded border border-acento/50 bg-acento/10 p-3 text-sm">
+            <span className="flex-1">
+              <strong>{estado!.pilotos[p.pilotoId].nome}</strong> entra NESTA temporada no lugar de{' '}
+              {estado!.pilotos[jogador.pilotos[p.slot].pilotoId]?.nome ?? `assento ${p.slot + 1}`} —
+              rescisão de <span className="num">{formatarDinheiro(p.custoRescisao)}</span> já reservada.
+              Aplica ao confirmar a pré-temporada.
+            </span>
+            <Botao variante="perigo" onClick={() => cancelarPoach(p.pilotoId)}>
+              Cancelar (estorna {formatarDinheiro(p.custoRescisao)})
+            </Botao>
+          </div>
+        ))}
       <Card titulo={`Mercado de pilotos — ${pilotos.length} em atividade`}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -102,6 +123,7 @@ export function Mercado() {
           </table>
         </div>
       </Card>
+      </div>
 
       {/* Painel de oferta */}
       <div className="lg:sticky lg:top-4 lg:self-start">
@@ -110,7 +132,7 @@ export function Mercado() {
             <p className="text-sm text-mudo">
               Selecione um piloto na lista. Pilotos <span className="text-positivo">livres</span> são
               contratados no Escritório (assentos vagos); pilotos de outras equipes podem ser
-              roubados com rescisão — chegam na temporada seguinte.
+              tirados com rescisão — e correm por você <strong>já nesta temporada</strong>.
             </p>
           ) : (
             <div className="flex flex-col gap-3 text-sm">
@@ -151,16 +173,25 @@ export function Mercado() {
                       </button>
                     ))}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-mudo">Assento que vaga:</span>
-                    {([0, 1] as const).map((s) => (
-                      <button
-                        key={s} type="button" onClick={() => setSlot(s)}
-                        className={`rounded border px-2 py-0.5 text-xs font-semibold ${slot === s ? 'border-acento text-acento' : 'border-borda text-mudo'}`}
-                      >
-                        {estado!.pilotos[jogador.pilotos[s].pilotoId].nome.split(' ').at(-1)}
-                      </button>
-                    ))}
+                  <div className="flex flex-col gap-1">
+                    <span className="text-mudo">Assento do titular:</span>
+                    <div className="flex flex-col gap-1">
+                      {([0, 1] as const).map((s) => {
+                        const contratoAssento = jogador.pilotos[s];
+                        const vago = !contratoVigente(contratoAssento, estado!.ano);
+                        const nomeAtual = estado!.pilotos[contratoAssento.pilotoId]?.nome;
+                        return (
+                          <button
+                            key={s} type="button" onClick={() => setSlot(s)}
+                            className={`rounded border px-2 py-1 text-left text-xs ${slot === s ? 'border-acento text-texto' : 'border-borda text-mudo'}`}
+                          >
+                            Assento {s + 1}: {vago
+                              ? <span className="text-positivo">vago — o poacheado assume</span>
+                              : <>substituir <strong>{nomeAtual}</strong> (fica livre)</>}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {validacao && !validacao.valido ? (
@@ -169,7 +200,7 @@ export function Mercado() {
                     <>
                       <p className="text-mudo">
                         Rescisão a pagar: <span className="num text-texto">{formatarDinheiro(validacao?.custoRescisao ?? 0)}</span>
-                        {' '}(pesa no saldo deste ano; o piloto chega em {estado!.ano + 1}).
+                        {' '}(pesa no saldo deste ano; o piloto corre por você <strong>nesta temporada</strong>).
                       </p>
                       {previa && (
                         <p className={previa.aceita ? 'text-positivo' : 'text-alerta'}>
@@ -178,9 +209,9 @@ export function Mercado() {
                       )}
                       <Botao
                         onClick={() => fazerPoach({ ...oferta!, slot })}
-                        desabilitado={Boolean(estado!.ofertaPendente)}
+                        desabilitado={!janelaAberta}
                       >
-                        Enviar oferta
+                        {janelaAberta ? 'Enviar oferta' : 'Mercado fechado'}
                       </Botao>
                     </>
                   )}

@@ -274,6 +274,9 @@ export const POTENCIAL_ELITE = 87;
 export const PRESTIGIO_MINIMO_JOVEM_ELITE = 62;
 // Rescisão ao roubar piloto contratado (custo = anos restantes × salário × fator)
 export const FATOR_RESCISAO = 0.5;
+// O mercado é uma JANELA de pré-temporada: ofertas só nela, com teto de
+// poaches por janela (não dá para montar uma dupla de craques de uma vez)
+export const TETO_POACHES_POR_JANELA = 1;
 
 // ---------------------------------------------------------------------------
 // Custos de incidente (Bloco C) — pagos pelo jogador durante a temporada.

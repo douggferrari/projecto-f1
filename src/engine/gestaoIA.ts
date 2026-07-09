@@ -13,7 +13,7 @@ import { contratoVigente, criarContratoMotor, criarContratoPiloto } from './cont
 import { interessePiloto } from './mercado';
 import { potencialOverall } from './pilotoCarreira';
 import { gastosFixos, receitaTemporada } from './orcamento';
-import type { EstadoJogo, Motor, Patrocinador, Piloto } from './tipos';
+import type { EstadoJogo, Equipe, Motor, Patrocinador, Piloto } from './tipos';
 
 export interface CatalogoJogo {
   motores: Record<string, Motor>;
@@ -59,10 +59,6 @@ export function aplicarGestaoIA(estado: EstadoJogo, catalogoBase: CatalogoJogo):
       catalogo.patrocinadores,
       novo.premiacaoAnterior[equipe.id] ?? 0
     );
-    // A IA reserva uma fração da receita para desenvolvimento — não
-    // compromete tudo em salários.
-    const tetoGastosFixos = receita * (1 - RESERVA_DESENVOLVIMENTO_IA);
-
     // 1. Motor: renova o mesmo fornecedor por 2 anos se expirou
     if (!contratoVigente(equipe.contratoMotor, novo.ano)) {
       const motor = catalogo.motores[equipe.contratoMotor.motorId];
@@ -75,29 +71,13 @@ export function aplicarGestaoIA(estado: EstadoJogo, catalogoBase: CatalogoJogo):
       const contrato = equipe.pilotos[slot];
       if (contratoVigente(contrato, novo.ano)) continue;
 
-      const outrosGastos = gastosFixos(equipe) - contrato.salarioAnual;
-      const cabe = (salario: number) => outrosGastos + salario <= tetoGastosFixos;
-      const aceita = (p: Piloto) =>
-        interessePiloto(
-          p,
-          equipe,
-          { pilotoId: p.id, salarioAnual: p.salarioBase, duracaoAnos: 2 },
-          undefined,
-          catalogo.patrocinadores[equipe.patrocinadorId] // Fase 6: a marca conta
-        ).aceita;
-
-      const candidatos = [...livres]
-        .map((id) => catalogo.pilotos[id])
-        .filter((p) => p && !p.aposentado && !contratados.has(p.id))
-        .sort((a, b) => notaPiloto(b) - notaPiloto(a));
-
-      const escolhido =
-        candidatos.find((p) => cabe(p.salarioBase) && aceita(p)) ??
-        // Ninguém "interessado" cabe: o mais barato que aceite
-        [...candidatos].sort((a, b) => a.salarioBase - b.salarioBase).find((p) => aceita(p)) ??
-        // Último recurso: o de menor ambição do pool assina mesmo assim
-        // (piloto sem volante prefere correr a ficar de fora)
-        [...candidatos].sort((a, b) => potencialOverall(a) - potencialOverall(b))[0];
+      const escolhido = escolherSubstitutoIA(
+        equipe,
+        contrato.salarioAnual,
+        [...livres].filter((id) => !contratados.has(id)),
+        catalogo,
+        novo.premiacaoAnterior[equipe.id] ?? 0
+      );
 
       if (escolhido) {
         livres.delete(escolhido.id);
@@ -119,4 +99,48 @@ export function aplicarGestaoIA(estado: EstadoJogo, catalogoBase: CatalogoJogo):
 
   novo.pilotosLivres = [...livres];
   return novo;
+}
+
+/**
+ * A política de contratação da IA para UM assento vago, isolada para
+ * reutilização (recomposição de equipe que perdeu piloto num poach):
+ * o melhor livre que cabe no teto E aceita a equipe; senão o mais barato
+ * que aceite; em último caso, o de menor ambição (ninguém fica sem carro).
+ * Determinística — sem RNG.
+ */
+export function escolherSubstitutoIA(
+  equipe: Equipe,
+  salarioDoAssentoVago: number,
+  livresIds: string[],
+  catalogo: CatalogoJogo,
+  premiacaoAnterior: number
+): Piloto | undefined {
+  const receita = receitaTemporada(equipe, catalogo.patrocinadores, premiacaoAnterior);
+  // A IA reserva uma fração da receita para desenvolvimento — não
+  // compromete tudo em salários.
+  const tetoGastosFixos = receita * (1 - RESERVA_DESENVOLVIMENTO_IA);
+  const outrosGastos = gastosFixos(equipe) - salarioDoAssentoVago;
+  const cabe = (salario: number) => outrosGastos + salario <= tetoGastosFixos;
+  const aceita = (p: Piloto) =>
+    interessePiloto(
+      p,
+      equipe,
+      { pilotoId: p.id, salarioAnual: p.salarioBase, duracaoAnos: 2 },
+      undefined,
+      catalogo.patrocinadores[equipe.patrocinadorId] // Fase 6: a marca conta
+    ).aceita;
+
+  const candidatos = livresIds
+    .map((id) => catalogo.pilotos[id])
+    .filter((p) => p && !p.aposentado)
+    .sort((a, b) => notaPiloto(b) - notaPiloto(a));
+
+  return (
+    candidatos.find((p) => cabe(p.salarioBase) && aceita(p)) ??
+    // Ninguém "interessado" cabe: o mais barato que aceite
+    [...candidatos].sort((a, b) => a.salarioBase - b.salarioBase).find((p) => aceita(p)) ??
+    // Último recurso: o de menor ambição do pool assina mesmo assim
+    // (piloto sem volante prefere correr a ficar de fora)
+    [...candidatos].sort((a, b) => potencialOverall(a) - potencialOverall(b))[0]
+  );
 }

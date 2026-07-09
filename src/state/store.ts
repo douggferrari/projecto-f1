@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { CHEFES_INICIAIS } from '../data/chefes';
 import { ANO_INICIAL, EQUIPES_INICIAIS } from '../data/equipes';
 import {
+  cancelarContratacaoPendente,
   confirmarPreTemporada,
   criarCarreira,
   definirTaticasJogador,
@@ -42,6 +43,7 @@ interface JogoStore {
   concluirTemporada: (escolhaEquipe?: string) => void;
   simularTemporadaInteira: () => void;
   fazerPoach: (oferta: Oferta & { slot: 0 | 1 }) => void;
+  cancelarPoach: (pilotoId: string) => void;
   irPara: (tela: Tela) => void;
   limparErros: () => void;
   salvar: () => void;
@@ -129,6 +131,14 @@ export const useJogo = create<JogoStore>((set, get) => ({
       ultimaDecisaoMercado: { pilotoId: oferta.pilotoId, decisao: r.decisao, erro: r.erro },
     });
     if (r.estado !== estado) salvarJogo(r.estado);
+  },
+
+  cancelarPoach: (pilotoId) => {
+    const { estado } = get();
+    if (!estado) return;
+    const novo = cancelarContratacaoPendente(estado, pilotoId);
+    set({ estado: novo, ultimaDecisaoMercado: null });
+    if (novo !== estado) salvarJogo(novo);
   },
 
   irPara: (tela) => set({ tela }),

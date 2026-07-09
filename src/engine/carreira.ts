@@ -10,8 +10,8 @@
 
 import { simularClassificacao } from './classificacao';
 import { preverCorridaAoVivo } from './corridaAoVivo';
-import { contratoVigente, criarContratoMotor, pilotosLivres } from './contratos';
-import { aplicarGestaoIA, type CatalogoJogo } from './gestaoIA';
+import { contratoVigente, criarContratoMotor, criarContratoPiloto, pilotosLivres } from './contratos';
+import { aplicarGestaoIA, escolherSubstitutoIA, type CatalogoJogo } from './gestaoIA';
 import { custosIncidentesDoGP } from './incidentes';
 import { interessePiloto, validarPoach, type DecisaoPiloto, type Oferta } from './mercado';
 import { validarOrcamento, formatarDinheiro } from './orcamento';
@@ -111,6 +111,7 @@ export function criarCarreira(
     custosIncidentesAno: 0,
     custoRescisaoAno: 0,
     anosNoVermelhoSeguidos: 0,
+    poachesPendentes: [],
   };
 
   // A IA dos rivais já resolve a pré-temporada dela (contratos + investimento)
@@ -195,6 +196,42 @@ export function confirmarPreTemporada(
   }
   const patrocinadorEfetivo = catalogo.patrocinadores[jogador.patrocinadorId];
 
+  // --- Poaches da janela: efeito IMEDIATO na temporada que vai começar ---
+  // Aplicados antes da validação de assentos: um poach pendente preenche o
+  // assento; se o assento estava ocupado, o piloto atual é liberado.
+  // (A recomposição das equipes de origem acontece DEPOIS das contratações
+  // do jogador — no confirm dele, ele tem prioridade no pool de livres.)
+  const origensARecompor: { origem: Equipe; slotOrigem: number; salarioVago: number }[] = [];
+  for (const poach of novo.poachesPendentes) {
+    const origem = novo.equipes.find((e) => e.id === poach.equipeOrigemId);
+    const slotOrigem = origem?.pilotos.findIndex(
+      (c) => c.pilotoId === poach.pilotoId && contratoVigente(c, novo.ano)
+    );
+    if (!origem || slotOrigem === undefined || slotOrigem < 0) {
+      erros.push(
+        `${catalogo.pilotos[poach.pilotoId]?.nome ?? poach.pilotoId} não está mais disponível na equipe de origem — cancele a pendência.`
+      );
+      continue;
+    }
+
+    // Assento ocupado do jogador → o atual é liberado (vira piloto livre)
+    const ocupante = jogador.pilotos[poach.slot];
+    if (contratoVigente(ocupante, novo.ano)) {
+      livres.add(ocupante.pilotoId);
+    }
+
+    // Sai da origem e assina com o jogador NESTA temporada
+    origensARecompor.push({ origem, slotOrigem, salarioVago: origem.pilotos[slotOrigem].salarioAnual });
+    origem.pilotos[slotOrigem] = { ...origem.pilotos[slotOrigem], duracaoAnos: 0 };
+    jogador.pilotos[poach.slot] = {
+      pilotoId: poach.pilotoId,
+      duracaoAnos: poach.duracaoAnos,
+      salarioAnual: poach.salarioAnual,
+      anoInicio: novo.ano,
+    };
+    livres.delete(poach.pilotoId);
+  }
+
   // --- Pilotos: oferta + decisão de interesse do piloto ---
   for (const contratacao of decisoes.pilotos ?? []) {
     const atual = jogador.pilotos[contratacao.slot];
@@ -234,6 +271,22 @@ export function confirmarPreTemporada(
     }
   }
 
+  // --- Recomposição determinística das origens dos poaches: ninguém entra
+  // na temporada com assento vazio (mesma política da IA de gestão) ---
+  for (const { origem, slotOrigem, salarioVago } of origensARecompor) {
+    const substituto = escolherSubstitutoIA(
+      origem,
+      salarioVago,
+      [...livres],
+      catalogo,
+      novo.premiacaoAnterior[origem.id] ?? 0
+    );
+    if (substituto) {
+      origem.pilotos[slotOrigem] = criarContratoPiloto(substituto, 2, novo.ano);
+      livres.delete(substituto.id);
+    }
+  }
+
   // --- Orçamento (regra dura; a rescisão de poach conta como gasto) ---
   const validacao = validarOrcamento(
     jogador,
@@ -249,6 +302,7 @@ export function confirmarPreTemporada(
 
   novo.investimentosAno[jogador.id] = decisoes.investimento;
   novo.pilotosLivres = [...livres];
+  novo.poachesPendentes = []; // aplicados — viraram contratos de verdade
   novo.fase = 'gp-classificacao';
   return { estado: novo, erros: [] };
 }
@@ -402,10 +456,11 @@ export interface ResultadoOferta {
 }
 
 /**
- * Oferta do jogador a um piloto SOB CONTRATO de outra equipe.
- * Se o piloto aceitar: a rescisão é paga neste ano (pesa no saldo) e o
- * piloto chega na temporada seguinte, no assento que vagar (slot).
- * Máximo de 1 contratação pendente por vez.
+ * Oferta do jogador a um piloto SOB CONTRATO de outra equipe — só na
+ * JANELA de pré-temporada. Se o piloto aceitar, a contratação fica
+ * PENDENTE (cancelável, com estorno) e é aplicada em confirmarPreTemporada:
+ * o piloto entra no assento escolhido JÁ NESTA temporada. A rescisão é
+ * cobrada no orçamento do ano na hora do aceite.
  */
 export function fazerOfertaPoach(
   estado: EstadoJogo,
@@ -419,7 +474,7 @@ export function fazerOfertaPoach(
   const jogador = estado.equipes.find((e) => e.ehJogador)!;
   const equipeAtual = estado.equipes.find((e) =>
     e.pilotos.some((c) => c.pilotoId === oferta.pilotoId && contratoVigente(c, estado.ano))
-  );
+  )!;
   const piloto = catalogo.pilotos[oferta.pilotoId];
   const decisao = interessePiloto(
     piloto,
@@ -431,15 +486,29 @@ export function fazerOfertaPoach(
   if (!decisao.aceita) return { estado, decisao };
 
   const novo: EstadoJogo = structuredClone(estado);
-  novo.ofertaPendente = {
+  novo.poachesPendentes.push({
     pilotoId: oferta.pilotoId,
     slot: oferta.slot,
     salarioAnual: oferta.salarioAnual,
     duracaoAnos: oferta.duracaoAnos,
     custoRescisao: validacao.custoRescisao!,
-  };
+    equipeOrigemId: equipeAtual.id,
+  });
   novo.custoRescisaoAno += validacao.custoRescisao!;
   return { estado: novo, decisao, custoRescisao: validacao.custoRescisao };
+}
+
+/**
+ * Cancela uma contratação pendente da janela, ESTORNANDO a rescisão do
+ * orçamento do ano. Só existe pendência na pré-temporada.
+ */
+export function cancelarContratacaoPendente(estado: EstadoJogo, pilotoId: string): EstadoJogo {
+  const pendente = estado.poachesPendentes.find((p) => p.pilotoId === pilotoId);
+  if (!pendente) return estado;
+  const novo: EstadoJogo = structuredClone(estado);
+  novo.poachesPendentes = novo.poachesPendentes.filter((p) => p.pilotoId !== pilotoId);
+  novo.custoRescisaoAno -= pendente.custoRescisao;
+  return novo;
 }
 
 // ---------------------------------------------------------------------------

@@ -6,9 +6,9 @@
 
 import type { EstadoJogo } from '../engine/tipos';
 
-// v3: Fase 6 mudou o shape do estado (motores vivos, chefes, históricos) —
+// v4: redesign do mercado (janela de pré-temporada, poaches pendentes) —
 // saves anteriores não são compatíveis e são ignorados na carga.
-export const CHAVE_SAVE = 'projecto-f1:save:v3';
+export const CHAVE_SAVE = 'projecto-f1:save:v4';
 
 function temLocalStorage(): boolean {
   return typeof localStorage !== 'undefined';
@@ -39,7 +39,8 @@ export function carregarJogo(): EstadoJogo | null {
       !estado.equipeJogadorId ||
       typeof estado.pilotos !== 'object' ||
       typeof estado.motores !== 'object' ||
-      typeof estado.chefes !== 'object'
+      typeof estado.chefes !== 'object' ||
+      !Array.isArray(estado.poachesPendentes)
     ) {
       return null;
     }

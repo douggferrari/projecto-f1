@@ -22,6 +22,7 @@ import {
   PESO_SALARIO_POR_FASE,
   POTENCIAL_ELITE,
   PRESTIGIO_MINIMO_JOVEM_ELITE,
+  TETO_POACHES_POR_JANELA,
   TETO_SCORE_SALARIO,
 } from './constantes';
 import { contratoVigente } from './contratos';
@@ -154,25 +155,29 @@ function montarMotivo(
 
 /**
  * Valida uma oferta do jogador a um piloto CONTRATADO de outra equipe
- * (poaching). Regras:
- *  - exige um assento do jogador que vague no fim do ano (contrato a 1 ano);
+ * (poaching). Modelo de JANELA (redesign):
+ *  - só na pré-temporada (o mercado fecha quando a temporada começa);
+ *  - efeito IMEDIATO: o piloto entra no assento escolhido NESTA temporada
+ *    (assento vago, ou ocupado — o atual é liberado);
  *  - custo de rescisão proporcional aos anos restantes do contrato alvo;
- *  - o piloto chega na temporada seguinte (OfertaPendente);
- *  - no máximo 1 poach por temporada.
+ *  - teto de poaches por janela (TETO_POACHES_POR_JANELA).
  */
 export function validarPoach(
   estado: EstadoJogo,
   pilotoId: string,
   slot: 0 | 1
 ): { valido: boolean; erro?: string; custoRescisao?: number } {
-  if (estado.ofertaPendente) {
-    return { valido: false, erro: 'Você já tem uma contratação pendente para o ano que vem.' };
+  if (estado.fase !== 'pre-temporada') {
+    return { valido: false, erro: 'Mercado fechado — reabre na próxima pré-temporada.' };
   }
-  const jogador = estado.equipes.find((e) => e.ehJogador)!;
-  const contratoSlot = jogador.pilotos[slot];
-  const anosRestantesSlot = contratoSlot.anoInicio + contratoSlot.duracaoAnos - estado.ano;
-  if (anosRestantesSlot > 1) {
-    return { valido: false, erro: 'Esse assento ainda tem contrato para o ano que vem — não haverá vaga.' };
+  if (estado.poachesPendentes.length >= TETO_POACHES_POR_JANELA) {
+    return {
+      valido: false,
+      erro: `Limite de ${TETO_POACHES_POR_JANELA} contratação(ões) de outras equipes por janela — cancele a pendência para trocar.`,
+    };
+  }
+  if (estado.poachesPendentes.some((p) => p.slot === slot)) {
+    return { valido: false, erro: 'Já existe uma contratação pendente para esse assento.' };
   }
   const equipeAlvo = equipeDoPiloto(estado, pilotoId);
   if (!equipeAlvo) {

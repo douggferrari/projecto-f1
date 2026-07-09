@@ -205,13 +205,18 @@ export type FaseTemporada =
   | 'fim-temporada'      // calendário terminou; premiação/convites/virada
   | 'fim-carreira';      // demitido sem nenhuma oferta — carreira encerrada
 
-/** Oferta aceita por um piloto contratado de outra equipe (chega no ano seguinte). */
-export interface OfertaPendente {
+/**
+ * Poach aceito na JANELA de pré-temporada — efeito imediato: o piloto entra
+ * no assento do jogador na temporada que está sendo montada. Fica pendente
+ * (e cancelável, com estorno) até confirmarPreTemporada aplicar tudo.
+ */
+export interface ContratacaoPendente {
   pilotoId: string;
-  slot: 0 | 1;          // assento do jogador que vaga no fim do ano
+  slot: 0 | 1;           // assento do jogador (vago OU ocupado — o atual é liberado)
   salarioAnual: number;
   duracaoAnos: number;
-  custoRescisao: number; // pago no orçamento do ano corrente
+  custoRescisao: number; // pago no orçamento DESTA temporada
+  equipeOrigemId: string;
 }
 
 export interface EstadoJogo {
@@ -239,9 +244,10 @@ export interface EstadoJogo {
   posicaoAnteriorJogador?: number;           // posição no construtores do ano passado
   // --- risco financeiro (Fase 4) ---
   custosIncidentesAno: number;               // reparos acumulados do JOGADOR nesta temporada
-  custoRescisaoAno: number;                  // rescisão paga por poach nesta temporada
+  custoRescisaoAno: number;                  // rescisões pagas por poach nesta temporada
   anosNoVermelhoSeguidos: number;            // déficits acima do limiar leve consecutivos
-  ofertaPendente?: OfertaPendente;           // poach aceito — piloto chega no ano novo
+  /** Poaches aceitos na janela — aplicados (atomicamente) ao confirmar a pré-temporada. */
+  poachesPendentes: ContratacaoPendente[];
   // --- fim de semana em andamento ---
   gridAtual?: ResultadoClassificacao[];      // grid entre a quali e a corrida
   taticasJogador?: TaticaCorrida[];          // táticas escolhidas p/ os 2 pilotos

@@ -50,6 +50,7 @@ function estadoSintetico(pontos: Record<string, number>, reputacao = 50): Estado
     custosIncidentesAno: 0,
     custoRescisaoAno: 0,
     anosNoVermelhoSeguidos: 0,
+    poachesPendentes: [],
   };
 }
 

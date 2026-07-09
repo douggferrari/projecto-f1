@@ -342,23 +342,8 @@ export function aplicarViradaDeAno(
     novo.pilotos[novato.id] = novato;
   }
 
-  // Poach aceito: o piloto chega à equipe do jogador; a antiga perde o contrato
-  if (novo.ofertaPendente) {
-    const { pilotoId, slot, salarioAnual, duracaoAnos } = novo.ofertaPendente;
-    const chegaAposentado = novo.pilotos[pilotoId]?.aposentado;
-    if (!chegaAposentado) {
-      for (const equipe of novo.equipes) {
-        if (equipe.id === jogador.id) continue;
-        for (let s = 0; s < 2; s++) {
-          if (equipe.pilotos[s].pilotoId === pilotoId) {
-            equipe.pilotos[s] = { ...equipe.pilotos[s], duracaoAnos: 0 }; // rescindido
-          }
-        }
-      }
-      jogador.pilotos[slot] = { pilotoId, duracaoAnos, salarioAnual, anoInicio: novoAno };
-    }
-    novo.ofertaPendente = undefined;
-  }
+  // (Redesign do mercado: poaches são aplicados na PRÓPRIA pré-temporada,
+  // em confirmarPreTemporada — a virada não entrega mais contratações.)
 
   // 6. Troca de equipe: convite aceito ou emprego novo após demissão
   const opcoes = relatorio.financeiro.demitido ? relatorio.ofertasEmprego : relatorio.convites;
@@ -373,7 +358,6 @@ export function aplicarViradaDeAno(
     destino.ehJogador = true;
     novo.equipeJogadorId = destino.id;
     novo.patrocinadoresBloqueados = [];
-    novo.ofertaPendente = undefined; // a contratação pendente era da equipe antiga
     // Os chefes trocam de cadeira (Fase 6): o chefe da equipe-destino
     // assume a equipe que o jogador deixou
     const chefeDeslocado = destino.chefeId;
@@ -401,6 +385,7 @@ export function aplicarViradaDeAno(
       : 0;
   novo.custosIncidentesAno = 0;
   novo.custoRescisaoAno = 0;
+  novo.poachesPendentes = []; // janela nova, pendências zeradas
   novo.ano = novoAno;
   novo.fase = 'pre-temporada';
   novo.gpAtual = 0;
