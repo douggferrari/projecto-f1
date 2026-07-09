@@ -398,12 +398,13 @@ export const LIMIAR_TENDENCIA_VISIVEL = 1.5;
 // Chefes de equipe (Bloco C): reputação da IA evolui como a do jogador
 // (expectativa = ranking de prestígio) e títulos de construtores sobem a
 // escada de status — Lendário com 3 ou mais campeonatos.
+// Sem título, o status vem da experiência: "Novato" APENAS na primeira
+// temporada; depois disso, "Veterano" (regra em chefes.ts/statusChefe).
 // ---------------------------------------------------------------------------
 export const STATUS_CHEFE: { minimo: number; nome: string }[] = [
   { minimo: 3, nome: 'Lendário' },
   { minimo: 2, nome: 'Consagrado' },
   { minimo: 1, nome: 'Estabelecido' },
-  { minimo: 0, nome: 'Novato' },
 ];
 
 // Eficiência de investimento da IA: fração do resíduo que vira de fato

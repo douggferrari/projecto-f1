@@ -136,7 +136,9 @@ export function Rankings() {
                       </span>
                     ) : '—'}
                   </td>
-                  <td className="py-1.5 pr-3"><StatusChefeBadge campeonatos={chefe.campeonatosVencidos} /></td>
+                  <td className="py-1.5 pr-3">
+                    <StatusChefeBadge campeonatos={chefe.campeonatosVencidos} temporadas={chefe.historico.length} />
+                  </td>
                   <td className="num py-1.5 pr-3 text-right font-semibold">{Math.round(chefe.reputacao)}</td>
                   <td className="py-1.5 text-right">
                     <button

@@ -152,11 +152,18 @@ describe('Bloco B — evolução dos motores', () => {
 
 describe('Bloco C — escada de status do chefe', () => {
   it('o Lendário dispara EXATAMENTE em 3 títulos', () => {
-    expect(statusChefe(0)).toBe('Novato');
-    expect(statusChefe(1)).toBe('Estabelecido');
-    expect(statusChefe(2)).toBe('Consagrado');
-    expect(statusChefe(3)).toBe('Lendário');
-    expect(statusChefe(7)).toBe('Lendário');
+    expect(statusChefe(1, 5)).toBe('Estabelecido');
+    expect(statusChefe(2, 5)).toBe('Consagrado');
+    expect(statusChefe(3, 5)).toBe('Lendário');
+    expect(statusChefe(7, 20)).toBe('Lendário');
+  });
+
+  it('"Novato" é só a primeira temporada; sem título depois vira Veterano', () => {
+    expect(statusChefe(0, 0)).toBe('Novato');
+    expect(statusChefe(0, 1)).toBe('Veterano');
+    expect(statusChefe(0, 10)).toBe('Veterano');
+    // Um título na primeira temporada já pula direto para Estabelecido
+    expect(statusChefe(1, 1)).toBe('Estabelecido');
   });
 });
 
@@ -201,6 +208,6 @@ describe('Bloco C — atualização anual dos chefes', () => {
       { 'eq-a': 1, 'eq-b': 2 }
     );
     expect(chefes['chefe-a'].campeonatosVencidos).toBe(3);
-    expect(statusChefe(chefes['chefe-a'].campeonatosVencidos)).toBe('Lendário');
+    expect(statusChefe(chefes['chefe-a'].campeonatosVencidos, chefes['chefe-a'].historico.length)).toBe('Lendário');
   });
 });

@@ -294,7 +294,7 @@ console.log('\n=== 3. PIPELINE — grid vivo ao longo de 12 temporadas (seed 0, 
     const equipe = estado.equipes.find((e) => e.chefeId === chefe.id);
     const ultima = chefe.historico.at(-1);
     console.log(
-      `${chefe.nome.padEnd(20)} rep ${String(Math.round(chefe.reputacao)).padStart(3)} | ${String(chefe.campeonatosVencidos)} título(s) → ${statusChefe(chefe.campeonatosVencidos).padEnd(12)} | ${equipe?.nome ?? '—'}${ultima ? ` | último ano: P${ultima.posicaoConstrutores}` : ''}`
+      `${chefe.nome.padEnd(20)} rep ${String(Math.round(chefe.reputacao)).padStart(3)} | ${String(chefe.campeonatosVencidos)} título(s) → ${statusChefe(chefe.campeonatosVencidos, chefe.historico.length).padEnd(12)} | ${equipe?.nome ?? '—'}${ultima ? ` | último ano: P${ultima.posicaoConstrutores}` : ''}`
     );
   }
 

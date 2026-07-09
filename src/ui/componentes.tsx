@@ -137,13 +137,14 @@ export function TendenciaMotorBadge({ motor }: { motor: Motor }) {
   return <span className="text-mudo/60" title="Estável nos últimos anos">▬</span>;
 }
 
-/** Selo de status do chefe (Novato → Estabelecido → Consagrado → Lendário). */
-export function StatusChefeBadge({ campeonatos }: { campeonatos: number }) {
-  const status = statusChefe(campeonatos);
+/** Selo de status do chefe (Novato → Veterano → Estabelecido → Consagrado → Lendário). */
+export function StatusChefeBadge({ campeonatos, temporadas }: { campeonatos: number; temporadas: number }) {
+  const status = statusChefe(campeonatos, temporadas);
   const cores: Record<string, string> = {
     'Lendário': 'border-alerta/60 text-alerta',
     'Consagrado': 'border-acento/60 text-acento',
     'Estabelecido': 'border-positivo/50 text-positivo',
+    'Veterano': 'border-borda text-texto',
     'Novato': 'border-borda text-mudo',
   };
   return (

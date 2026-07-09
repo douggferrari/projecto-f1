@@ -16,9 +16,16 @@ import type { Chefe, EstadoJogo } from './tipos';
 /** Id fixo do chefe controlado pelo jogador. */
 export const CHEFE_JOGADOR_ID = 'chefe-jogador';
 
-/** Status na escada de títulos (Novato → Estabelecido → Consagrado → Lendário). */
-export function statusChefe(campeonatosVencidos: number): string {
-  return STATUS_CHEFE.find((s) => campeonatosVencidos >= s.minimo)!.nome;
+/**
+ * Status na escada do chefe: Novato → Veterano → Estabelecido → Consagrado
+ * → Lendário. "Novato" é só a PRIMEIRA temporada (zero completas); sem
+ * título depois disso o chefe é Veterano; com títulos, sobe pela escada.
+ */
+export function statusChefe(campeonatosVencidos: number, temporadasCompletas: number): string {
+  if (campeonatosVencidos >= 1) {
+    return STATUS_CHEFE.find((s) => campeonatosVencidos >= s.minimo)!.nome;
+  }
+  return temporadasCompletas === 0 ? 'Novato' : 'Veterano';
 }
 
 /**
