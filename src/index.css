@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   Tokens de design — "pit wall": painel de gestão escuro com acento roxo
+   de volta-mais-rápida e semânticas separadas (verde/vermelho/âmbar).
+   ============================================================================ */
+@theme {
+  --color-fundo: #11141b;
+  --color-superficie: #1a1f2a;
+  --color-superficie-2: #222836;
+  --color-borda: #2a3040;
+  --color-texto: #e9ecf3;
+  --color-mudo: #8c94a8;
+  --color-acento: #a78bfa;
+  --color-positivo: #4ade80;
+  --color-negativo: #f87171;
+  --color-alerta: #fbbf24;
+  /* código real de compostos da F1 */
+  --color-pneu-soft: #ef4444;
+  --color-pneu-medium: #facc15;
+  --color-pneu-hard: #e5e7eb;
+
+  --font-numerico: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+}
+
+html {
+  background-color: var(--color-fundo);
+  color: var(--color-texto);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Números alinhados em tabelas de tempos/pontos/dinheiro */
+.num {
+  font-family: var(--font-numerico);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rótulos de seção estilo timing screen */
+.rotulo {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-mudo);
+}
+
+/* Foco visível para navegação por teclado */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-acento);
+  outline-offset: 2px;
+}

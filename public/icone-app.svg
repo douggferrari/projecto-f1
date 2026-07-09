@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Ícone do Projecto F1: carbono escuro, faixas de velocidade e monograma F1 -->
+  <rect width="1024" height="1024" fill="#11141b"/>
+  <!-- faixas diagonais de velocidade (roxo volta-mais-rápida) -->
+  <polygon points="0,1024 260,1024 1024,260 1024,0 900,0" fill="#a78bfa" opacity="0.16"/>
+  <polygon points="0,860 0,1024 120,1024 1024,120 1024,0 964,0" fill="#a78bfa" opacity="0.28"/>
+  <!-- F -->
+  <rect x="252" y="322" width="96" height="380" fill="#f2f4fa"/>
+  <rect x="252" y="322" width="240" height="84" fill="#f2f4fa"/>
+  <rect x="252" y="486" width="196" height="72" fill="#f2f4fa"/>
+  <!-- 1 -->
+  <rect x="612" y="322" width="96" height="380" fill="#f2f4fa"/>
+  <polygon points="612,322 512,422 612,422" fill="#f2f4fa"/>
+  <!-- sublinhado de aceleração -->
+  <rect x="252" y="748" width="330" height="26" fill="#a78bfa"/>
+  <rect x="606" y="748" width="102" height="26" fill="#a78bfa" opacity="0.55"/>
+</svg>
