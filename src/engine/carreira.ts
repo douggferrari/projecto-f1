@@ -10,8 +10,8 @@
 
 import { simularClassificacao } from './classificacao';
 import { preverCorridaAoVivo } from './corridaAoVivo';
-import { contratoVigente, criarContratoMotor, criarContratoPiloto, pilotosLivres } from './contratos';
-import { aplicarGestaoIA, escolherSubstitutoIA, type CatalogoJogo } from './gestaoIA';
+import { contratoVigente, criarContratoMotor, pilotosLivres } from './contratos';
+import { aplicarGestaoIA, preencherAssentoGarantido, type CatalogoJogo } from './gestaoIA';
 import { custosIncidentesDoGP } from './incidentes';
 import { interessePiloto, validarPoach, type DecisaoPiloto, type Oferta } from './mercado';
 import { validarOrcamento, formatarDinheiro } from './orcamento';
@@ -273,17 +273,23 @@ export function confirmarPreTemporada(
 
   // --- Recomposição determinística das origens dos poaches: ninguém entra
   // na temporada com assento vazio (mesma política da IA de gestão) ---
-  for (const { origem, slotOrigem, salarioVago } of origensARecompor) {
-    const substituto = escolherSubstitutoIA(
-      origem,
-      salarioVago,
-      [...livres],
-      catalogo,
-      novo.premiacaoAnterior[origem.id] ?? 0
+  if (origensARecompor.length > 0) {
+    const contratados = new Set(
+      novo.equipes.flatMap((e) =>
+        e.pilotos.filter((c) => contratoVigente(c, novo.ano)).map((c) => c.pilotoId)
+      )
     );
-    if (substituto) {
-      origem.pilotos[slotOrigem] = criarContratoPiloto(substituto, 2, novo.ano);
-      livres.delete(substituto.id);
+    for (const { origem, slotOrigem } of origensARecompor) {
+      preencherAssentoGarantido({
+        equipe: origem,
+        slot: slotOrigem,
+        ano: novo.ano,
+        livres,
+        contratados,
+        pilotosVivos: novo.pilotos,
+        catalogo,
+        premiacaoAnterior: novo.premiacaoAnterior[origem.id] ?? 0,
+      });
     }
   }
 

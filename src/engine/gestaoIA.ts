@@ -11,7 +11,7 @@
 import { EFICIENCIA_INVESTIMENTO_IA, RESERVA_DESENVOLVIMENTO_IA } from './constantes';
 import { contratoVigente, criarContratoMotor, criarContratoPiloto } from './contratos';
 import { interessePiloto } from './mercado';
-import { potencialOverall } from './pilotoCarreira';
+import { criarPilotoReserva, potencialOverall } from './pilotoCarreira';
 import { gastosFixos, receitaTemporada } from './orcamento';
 import type { EstadoJogo, Equipe, Motor, Patrocinador, Piloto } from './tipos';
 
@@ -71,22 +71,16 @@ export function aplicarGestaoIA(estado: EstadoJogo, catalogoBase: CatalogoJogo):
       const contrato = equipe.pilotos[slot];
       if (contratoVigente(contrato, novo.ano)) continue;
 
-      const escolhido = escolherSubstitutoIA(
+      preencherAssentoGarantido({
         equipe,
-        contrato.salarioAnual,
-        [...livres].filter((id) => !contratados.has(id)),
+        slot,
+        ano: novo.ano,
+        livres,
+        contratados,
+        pilotosVivos: catalogo.pilotos,
         catalogo,
-        novo.premiacaoAnterior[equipe.id] ?? 0
-      );
-
-      if (escolhido) {
-        livres.delete(escolhido.id);
-        contratados.add(escolhido.id);
-        if (escolhido.id !== contrato.pilotoId) livres.add(contrato.pilotoId);
-        equipe.pilotos[slot] = criarContratoPiloto(escolhido, 2, novo.ano);
-      }
-      // Pool vazio (não deve acontecer com o pipeline de novatos): assento
-      // fica com o contrato expirado — o carro corre com o piloto antigo.
+        premiacaoAnterior: novo.premiacaoAnterior[equipe.id] ?? 0,
+      });
     }
 
     // 3. Investimento: o resíduo vai para desenvolvimento com a eficiência
@@ -143,4 +137,65 @@ export function escolherSubstitutoIA(
     // (piloto sem volante prefere correr a ficar de fora)
     [...candidatos].sort((a, b) => potencialOverall(a) - potencialOverall(b))[0]
   );
+}
+
+/**
+ * Preenche UM assento GARANTINDO o invariante do grid: toda equipe entra
+ * na temporada com contrato vigente e nenhum piloto corre por duas equipes.
+ *
+ * Correção do bug de duplicação: o piloto antigo só volta ao pool se NÃO
+ * estiver contratado por outra equipe (o contrato dele aqui expirou, mas
+ * ele pode já ter assinado com um rival nesta mesma pré-temporada).
+ * E se o pool secar, um piloto reserva é criado — o assento nunca fica
+ * com contrato vencido escalando um piloto que pertence a outra equipe.
+ */
+export function preencherAssentoGarantido(opts: {
+  equipe: Equipe;
+  slot: number;
+  ano: number;
+  livres: Set<string>;
+  contratados: Set<string>;
+  /** Registro VIVO de pilotos (estado) — o reserva de emergência entra aqui. */
+  pilotosVivos: Record<string, Piloto>;
+  catalogo: CatalogoJogo;
+  premiacaoAnterior: number;
+}): void {
+  const { equipe, slot, ano, livres, contratados, pilotosVivos, catalogo, premiacaoAnterior } = opts;
+  const contratoAntigo = equipe.pilotos[slot];
+  const antigo = pilotosVivos[contratoAntigo.pilotoId];
+
+  const escolhido =
+    escolherSubstitutoIA(
+      equipe,
+      contratoAntigo.salarioAnual,
+      [...livres].filter((id) => !contratados.has(id)),
+      catalogo,
+      premiacaoAnterior
+    ) ??
+    // Fallback 1: re-assina o antigo, se segue ativo e sem contrato em outra equipe
+    (antigo && !antigo.aposentado && !contratados.has(antigo.id) ? antigo : undefined) ??
+    // Fallback 2: qualquer piloto ativo sem contrato (mesmo fora do pool)
+    Object.values(pilotosVivos)
+      .filter((p) => !p.aposentado && !contratados.has(p.id))
+      .sort((a, b) => a.salarioBase - b.salarioBase)[0];
+
+  if (escolhido) {
+    livres.delete(escolhido.id);
+    contratados.add(escolhido.id);
+    // O antigo volta ao pool SÓ se estiver de fato disponível
+    if (
+      escolhido.id !== contratoAntigo.pilotoId &&
+      antigo && !antigo.aposentado && !contratados.has(antigo.id)
+    ) {
+      livres.add(antigo.id);
+    }
+    equipe.pilotos[slot] = criarContratoPiloto(escolhido, 2, ano);
+    return;
+  }
+
+  // Emergência determinística (sem RNG): o grid nunca fica com buraco
+  const reserva = criarPilotoReserva(equipe, ano, slot);
+  pilotosVivos[reserva.id] = reserva;
+  contratados.add(reserva.id);
+  equipe.pilotos[slot] = criarContratoPiloto(reserva, 1, ano);
 }

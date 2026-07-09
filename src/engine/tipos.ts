@@ -29,6 +29,8 @@ export type FaseCarreiraPiloto = 'subindo' | 'auge' | 'declinio' | 'veterano';
 export interface Piloto {
   id: string;
   nome: string;
+  /** Código de 3 letras do país (ex.: 'BRA') — bandeira exibida na UI. */
+  nacionalidade: string;
   // --- Qualidade ATUAL (o que a simulação de corrida lê) ---
   // Derivada de potencial × curva de idade; recalculada a cada virada de ano.
   classificacao: number;  // 0-100 — ritmo de uma volta

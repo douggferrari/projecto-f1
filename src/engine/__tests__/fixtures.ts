@@ -13,7 +13,7 @@ export function motorTeste(sobrescrever: Partial<Motor> = {}): Motor {
 
 export function pilotoTeste(sobrescrever: Partial<Piloto> = {}): Piloto {
   return {
-    id: 'p1', nome: 'Piloto Teste',
+    id: 'p1', nome: 'Piloto Teste', nacionalidade: 'BRA',
     classificacao: 80, corrida: 80, confiabilidade: 100, salarioBase: 1_000_000,
     // Arco de carreira (Fase 4): no auge, qualidade = potencial
     idade: 28, reputacao: 50,

@@ -10,6 +10,7 @@ import { gastosFixos, receitaTemporada } from '../../engine/orcamento';
 import { CATALOGO } from '../../state/catalogo';
 import { useJogo } from '../../state/store';
 import { formatarDinheiro } from '../formatar';
+import { bandeira } from '../nomes';
 import { Botao, Card, CategoriaBadge, Estrelas, FaseBadge } from '../componentes';
 
 export function Sede() {
@@ -135,7 +136,7 @@ export function Sede() {
             return (
               <div key={contrato.pilotoId} className="flex items-center gap-3 rounded border border-borda p-3">
                 <div className="flex-1">
-                  <p className="font-semibold">{piloto.nome} <span className="num text-sm text-mudo">{piloto.idade} anos</span></p>
+                  <p className="font-semibold">{bandeira(piloto.nacionalidade)} {piloto.nome} <span className="num text-sm text-mudo">{piloto.idade} anos</span></p>
                   <p className="mt-0.5 flex items-center gap-2 text-xs text-mudo">
                     <CategoriaBadge piloto={piloto} />
                     <FaseBadge idade={piloto.idade} />

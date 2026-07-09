@@ -14,7 +14,7 @@ import type { Piloto } from '../../engine/tipos';
 import { CATALOGO } from '../../state/catalogo';
 import { useJogo } from '../../state/store';
 import { formatarDinheiro } from '../formatar';
-import { nomeEquipe } from '../nomes';
+import { bandeira, nomeEquipe } from '../nomes';
 import { Botao, Card, CategoriaBadge, CorEquipe, FaseBadge } from '../componentes';
 
 export function Mercado() {
@@ -97,7 +97,7 @@ export function Mercado() {
                       selecionado === piloto.id ? 'bg-superficie-2' : ''
                     } ${equipe?.ehJogador ? 'bg-acento/10' : ''}`}
                   >
-                    <td className="py-1.5 pr-3 font-medium">{piloto.nome}</td>
+                    <td className="py-1.5 pr-3 font-medium">{bandeira(piloto.nacionalidade)} {piloto.nome}</td>
                     <td className="num py-1.5 pr-3">{piloto.idade}</td>
                     <td className="py-1.5 pr-3"><CategoriaBadge piloto={piloto} /></td>
                     <td className="py-1.5 pr-3"><FaseBadge idade={piloto.idade} /></td>
@@ -137,7 +137,7 @@ export function Mercado() {
           ) : (
             <div className="flex flex-col gap-3 text-sm">
               <div>
-                <p className="font-semibold">{alvo.nome} <span className="num text-mudo">{alvo.idade} anos</span></p>
+                <p className="font-semibold">{bandeira(alvo.nacionalidade)} {alvo.nome} <span className="num text-mudo">{alvo.idade} anos</span></p>
                 <p className="mt-1 flex items-center gap-2 text-xs">
                   <CategoriaBadge piloto={alvo} />
                   <FaseBadge idade={alvo.idade} />

@@ -14,6 +14,7 @@ import type { Equipe, Piloto } from '../../engine/tipos';
 import { CATALOGO } from '../../state/catalogo';
 import { useJogo } from '../../state/store';
 import { formatarDinheiro } from '../formatar';
+import { bandeira } from '../nomes';
 import { Botao, Card, CategoriaBadge, FaseBadge, ListaErros, TendenciaMotorBadge } from '../componentes';
 
 interface SelecaoPiloto {
@@ -153,7 +154,7 @@ function EscritorioPreTemporada() {
                 </p>
               ) : vigente ? (
                 <InfoContrato
-                  nome={`${pilotoAtual.nome} · ${pilotoAtual.idade} anos`}
+                  nome={`${bandeira(pilotoAtual.nacionalidade)} ${pilotoAtual.nome} · ${pilotoAtual.idade} anos`}
                   detalhe={`quali ${Math.round(pilotoAtual.classificacao)} · corrida ${Math.round(pilotoAtual.corrida)} · conf ${Math.round(pilotoAtual.confiabilidade)}`}
                   custo={contrato.salarioAnual}
                   anos={anosRestantes(contrato, ano)}

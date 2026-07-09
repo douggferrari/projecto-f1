@@ -119,7 +119,11 @@ export const NIVEL_POS_REGULAMENTO_BASE = 40;     // piso após troca de regulam
 // retém pouco do nível antigo e paga muito pelo investimento acumulado no
 // ciclo — quem investiu consistente entra no regulamento novo na frente.
 export const RETENCAO_REGULAMENTO = 0.2;          // fração do excedente mantida
-export const BONUS_INVESTIMENTO_CICLO = 22;       // bônus máx. p/ ciclo bem investido
+// (22 → 27 após o fix da duplicação de pilotos: com o mercado saudável os
+// rivais contratam melhor; o investidor consistente precisa de um salto de
+// regulamento mais recompensador para a janela de progressão validada —
+// top 3-4 em ~4-6 temporadas — continuar de pé.)
+export const BONUS_INVESTIMENTO_CICLO = 27;       // bônus máx. p/ ciclo bem investido
 export const INVESTIMENTO_CICLO_REFERENCIA = 220_000_000; // referência de ciclo "cheio"
 
 // ---------------------------------------------------------------------------

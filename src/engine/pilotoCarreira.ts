@@ -158,14 +158,18 @@ export function sorteiaAposentadoria(idade: number, rng: RNG): boolean {
   return rng.chance(Math.min(1, chance));
 }
 
-// Nomes fictícios para o pipeline de novatos
-const NOMES = [
-  'Caio', 'Mateo', 'Yuki', 'Léon', 'Tomás', 'Nikita', 'Jasper', 'Rafinha', 'Emil', 'Duda',
-  'Álvaro', 'Kimi', 'Otto', 'Bruno', 'Sacha', 'Teo', 'Iuri', 'Marco', 'Felix', 'Dario',
-];
-const SOBRENOMES = [
-  'Ferraz', 'Kobayashi', 'Silva', 'Marchetti', 'Novak', 'Duval', 'Ekström', 'Paiva', 'Romano', 'Vidal',
-  'Costa', 'Meyer', 'Sato', 'Oliveira', 'Kranz', 'Baptista', 'Moretti', 'Lindgren', 'Serrano', 'Faria',
+// Perfis de novato por país: nome e sobrenome coerentes com a nacionalidade
+const PERFIS_NOVATO: { pais: string; nomes: string[]; sobrenomes: string[] }[] = [
+  { pais: 'BRA', nomes: ['Caio', 'Rafinha', 'Duda', 'Teo', 'Bruno'], sobrenomes: ['Ferraz', 'Silva', 'Paiva', 'Oliveira', 'Baptista'] },
+  { pais: 'ITA', nomes: ['Marco', 'Dario', 'Enea', 'Luca'], sobrenomes: ['Marchetti', 'Romano', 'Moretti', 'Colombo'] },
+  { pais: 'JPN', nomes: ['Yuki', 'Kimi', 'Haru', 'Ren'], sobrenomes: ['Kobayashi', 'Sato', 'Fujii', 'Mori'] },
+  { pais: 'FRA', nomes: ['Léon', 'Sacha', 'Hugo', 'Nino'], sobrenomes: ['Duval', 'Perrin', 'Garnier', 'Roche'] },
+  { pais: 'GER', nomes: ['Emil', 'Otto', 'Felix', 'Til'], sobrenomes: ['Meyer', 'Kranz', 'Brandt', 'Vogel'] },
+  { pais: 'ESP', nomes: ['Álvaro', 'Mateo', 'Iker', 'Pau'], sobrenomes: ['Vidal', 'Serrano', 'Navarro', 'Cruz'] },
+  { pais: 'SWE', nomes: ['Nils', 'Viggo', 'Axel'], sobrenomes: ['Ekström', 'Lindgren', 'Åberg'] },
+  { pais: 'GBR', nomes: ['Ollie', 'Harry', 'Callum'], sobrenomes: ['Whitfield', 'Barnes', 'Doyle'] },
+  { pais: 'ARG', nomes: ['Tomás', 'Franco', 'Joaquín'], sobrenomes: ['Ríos', 'Peralta', 'Sosa'] },
+  { pais: 'AUS', nomes: ['Jack', 'Lachlan', 'Kai'], sobrenomes: ['Hartley', 'Brooks', 'Reid'] },
 ];
 
 /** Gera os novatos da temporada (1-2, com cauda rara de "próximo craque"). */
@@ -176,9 +180,11 @@ export function gerarNovatos(ano: number, rng: RNG): Piloto[] {
     const potencial = craque
       ? rng.entre(POTENCIAL_CRAQUE_MINIMO, POTENCIAL_CRAQUE_MAXIMO)
       : rng.entre(POTENCIAL_NOVATO_MINIMO, POTENCIAL_NOVATO_MAXIMO);
+    const perfil = PERFIS_NOVATO[rng.inteiroEntre(0, PERFIS_NOVATO.length - 1)];
     const base: Omit<Piloto, 'classificacao' | 'corrida' | 'confiabilidade' | 'salarioBase'> = {
       id: `pil-nov-${ano}-${i + 1}`,
-      nome: `${NOMES[rng.inteiroEntre(0, NOMES.length - 1)]} ${SOBRENOMES[rng.inteiroEntre(0, SOBRENOMES.length - 1)]}`,
+      nacionalidade: perfil.pais,
+      nome: `${perfil.nomes[rng.inteiroEntre(0, perfil.nomes.length - 1)]} ${perfil.sobrenomes[rng.inteiroEntre(0, perfil.sobrenomes.length - 1)]}`,
       idade: rng.inteiroEntre(18, 21),
       potencialClassificacao: limitar0a100(potencial + rng.entre(-3, 3)),
       potencialCorrida: limitar0a100(potencial + rng.entre(-3, 3)),
@@ -189,6 +195,31 @@ export function gerarNovatos(ano: number, rng: RNG): Piloto[] {
     const piloto: Piloto = { ...base, ...qualidade, salarioBase: 0 };
     return { ...piloto, salarioBase: salarioExigido(piloto) };
   });
+}
+
+/**
+ * Piloto reserva de emergência — determinístico (sem RNG). Só entra em campo
+ * quando o pool de livres seca por completo: garante o invariante de que
+ * nenhuma equipe entra na temporada com assento sem contrato vigente.
+ */
+export function criarPilotoReserva(
+  equipe: { id: string; nome: string },
+  ano: number,
+  slot: number
+): Piloto {
+  const base: Omit<Piloto, 'classificacao' | 'corrida' | 'confiabilidade' | 'salarioBase'> = {
+    id: `pil-reserva-${ano}-${equipe.id}-${slot}`,
+    nacionalidade: 'BRA',
+    nome: `Reserva ${equipe.nome}`,
+    idade: 21,
+    potencialClassificacao: 63,
+    potencialCorrida: 64,
+    confiabilidadeBase: 70,
+    reputacao: 5,
+  };
+  const qualidade = qualidadeAtual(base);
+  const piloto: Piloto = { ...base, ...qualidade, salarioBase: 0 };
+  return { ...piloto, salarioBase: salarioExigido(piloto) };
 }
 
 /**

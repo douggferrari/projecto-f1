@@ -11,7 +11,7 @@ import type { Clima, Pneu, ResultadoGP, TaticaCorrida } from '../../engine/tipos
 import { CATALOGO } from '../../state/catalogo';
 import { useJogo } from '../../state/store';
 import { formatarGap, formatarTempoCorrida, formatarTempoVolta } from '../formatar';
-import { nomePiloto } from '../nomes';
+import { bandeira, nomePiloto } from '../nomes';
 import { Botao, Card, ListaErros, PneuChip } from '../componentes';
 import { CorridaAoVivo } from './CorridaAoVivo';
 import { QualiAoVivo } from './QualiAoVivo';
@@ -159,7 +159,7 @@ function EstrategiaPiloto(props: { tatica: TaticaCorrida; onChange: (t: TaticaCo
   };
 
   return (
-    <Card titulo={piloto.nome}>
+    <Card titulo={`${bandeira(piloto.nacionalidade)} ${piloto.nome}`}>
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2 text-sm">
           <span className="text-mudo">Paradas:</span>
