@@ -94,9 +94,14 @@ export function preverCorridaAoVivo(
   estado: EstadoJogo,
   catalogoBase: CatalogoTransmissao
 ): TransmissaoCorrida {
-  // Pilotos vivos: o estado é a fonte da verdade (Fase 4)
+  // Pilotos e motores vivos: o estado é a fonte da verdade (Fases 4 e 6)
   const temPilotosVivos = estado.pilotos && Object.keys(estado.pilotos).length > 0;
-  const catalogo = temPilotosVivos ? { ...catalogoBase, pilotos: estado.pilotos } : catalogoBase;
+  const temMotoresVivos = estado.motores && Object.keys(estado.motores).length > 0;
+  const catalogo = {
+    ...catalogoBase,
+    pilotos: temPilotosVivos ? estado.pilotos : catalogoBase.pilotos,
+    motores: temMotoresVivos ? estado.motores : catalogoBase.motores,
+  };
   const circuito = catalogo.circuitos[estado.calendario[estado.gpAtual]];
   const voltasTotais = circuito.voltas;
 

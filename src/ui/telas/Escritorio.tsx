@@ -14,7 +14,7 @@ import type { Equipe, Piloto } from '../../engine/tipos';
 import { CATALOGO } from '../../state/catalogo';
 import { useJogo } from '../../state/store';
 import { formatarDinheiro } from '../formatar';
-import { Botao, Card, CategoriaBadge, FaseBadge, ListaErros } from '../componentes';
+import { Botao, Card, CategoriaBadge, FaseBadge, ListaErros, TendenciaMotorBadge } from '../componentes';
 
 interface SelecaoPiloto {
   id: string;
@@ -49,8 +49,8 @@ function EscritorioPreTemporada() {
   // Equipe "prévia" com as seleções aplicadas — orçamento usa o motor real
   const previa: Equipe = useMemo(() => {
     const eq = structuredClone(jogador);
-    if (!motorVigente && CATALOGO.motores[motorSel.id]) {
-      eq.contratoMotor = criarContratoMotor(CATALOGO.motores[motorSel.id], motorSel.duracao, ano);
+    if (!motorVigente && estado!.motores[motorSel.id]) {
+      eq.contratoMotor = criarContratoMotor(estado!.motores[motorSel.id], motorSel.duracao, ano);
     }
     for (const slot of assentosVagos) {
       const sel = pilotosSel[slot];
@@ -71,7 +71,7 @@ function EscritorioPreTemporada() {
     previa, CATALOGO.patrocinadores, premiacao, investimento + estado!.custoRescisaoAno
   );
   const tetoInvestimento = Math.max(0, orcamento.receita - orcamento.gastosFixos - estado!.custoRescisaoAno);
-  const estimativa = estimativaIncidentes(previa, estado!.pilotos, CATALOGO.motores, estado!.calendario.length);
+  const estimativa = estimativaIncidentes(previa, estado!.pilotos, estado!.motores, estado!.calendario.length);
   const sugerido = Math.max(0, tetoInvestimento - estimativa);
 
   const confirmar = () => {
@@ -98,14 +98,14 @@ function EscritorioPreTemporada() {
         <Card titulo="Contrato de motor">
           {motorVigente ? (
             <InfoContrato
-              nome={CATALOGO.motores[jogador.contratoMotor.motorId].nome}
-              detalhe={`potência ${CATALOGO.motores[jogador.contratoMotor.motorId].potencia} · confiabilidade ${CATALOGO.motores[jogador.contratoMotor.motorId].confiabilidade}`}
+              nome={estado!.motores[jogador.contratoMotor.motorId].nome}
+              detalhe={`potência ${estado!.motores[jogador.contratoMotor.motorId].potencia} · confiabilidade ${estado!.motores[jogador.contratoMotor.motorId].confiabilidade}`}
               custo={jogador.contratoMotor.custoAnual}
               anos={anosRestantes(jogador.contratoMotor, ano)}
             />
           ) : (
             <div className="flex flex-col gap-2">
-              {Object.values(CATALOGO.motores).map((motor) => (
+              {Object.values(estado!.motores).map((motor) => (
                 <label
                   key={motor.id}
                   className={`flex cursor-pointer items-center gap-3 rounded border p-2 ${
@@ -117,7 +117,7 @@ function EscritorioPreTemporada() {
                     checked={motorSel.id === motor.id}
                     onChange={() => setMotorSel({ ...motorSel, id: motor.id })}
                   />
-                  <span className="flex-1 font-medium">{motor.nome}</span>
+                  <span className="flex-1 font-medium">{motor.nome} <TendenciaMotorBadge motor={motor} /></span>
                   <span className="num w-20 text-right text-sm text-mudo">pot {motor.potencia}</span>
                   <span className="num w-20 text-right text-sm text-mudo">conf {motor.confiabilidade}</span>
                   <span className="num w-24 text-right text-sm">{formatarDinheiro(custoAnualMotor(motor, motorSel.duracao))}/ano</span>
@@ -247,6 +247,12 @@ function EscritorioPreTemporada() {
                       onChange={() => setPatrocinadorId(pat.id)}
                     />
                     <span className="flex-1 font-medium">{pat.nome}</span>
+                    <span
+                      className={`text-xs ${pat.prestigio >= 70 ? 'text-acento' : 'text-mudo'}`}
+                      title="Prestígio da marca: soma um bônus (limitado) ao prestígio da equipe aos olhos dos pilotos"
+                    >
+                      marca {pat.prestigio}
+                    </span>
                     {pat.meta && (
                       <span className="text-xs text-mudo">
                         meta: top {pat.meta.posicaoConstrutoresMax} (+{formatarDinheiro(pat.meta.bonus)})
@@ -328,7 +334,7 @@ function EscritorioSomenteLeitura() {
   const { estado, irPara } = useJogo();
   const jogador = estado!.equipes.find((e) => e.ehJogador)!;
   const ano = estado!.ano;
-  const motor = CATALOGO.motores[jogador.contratoMotor.motorId];
+  const motor = estado!.motores[jogador.contratoMotor.motorId];
   const patrocinador = CATALOGO.patrocinadores[jogador.patrocinadorId];
   const investimento = estado!.investimentosAno[jogador.id] ?? 0;
 

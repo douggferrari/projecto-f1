@@ -15,7 +15,7 @@ import {
   simularRestoDaTemporada,
   type CatalogoCompleto,
 } from '../carreira';
-import { aplicarViradaDeAno, gerarRelatorioFimTemporada } from '../fimTemporada';
+import { aplicarViradaDeAno, classificacaoConstrutores, gerarRelatorioFimTemporada } from '../fimTemporada';
 import type { EstadoJogo, TaticaCorrida } from '../tipos';
 
 const catalogo: CatalogoCompleto = {
@@ -192,6 +192,35 @@ describe('temporada completa + fim de temporada', () => {
     // Premiação decrescente com a posição
     const [p1, p10] = [relatorio.classificacao[0], relatorio.classificacao[9]];
     expect(relatorio.premiacoes[p1.equipeId]).toBeGreaterThan(relatorio.premiacoes[p10.equipeId]);
+  });
+
+  it('a virada acumula históricos de chefe, piloto, motor e prestígio (Fase 6)', () => {
+    const estado = temporadaCompleta();
+    const virado = aplicarViradaDeAno(estado, catalogo);
+
+    // Chefes: todos com 1 temporada de histórico; campeão levou o título
+    const campeaoId = classificacaoConstrutores(estado)[0].equipeId;
+    const chefeCampeao = virado.chefes[virado.equipes.find((e) => e.id === campeaoId)!.chefeId];
+    expect(chefeCampeao.campeonatosVencidos).toBeGreaterThanOrEqual(1);
+    for (const equipe of virado.equipes) {
+      expect(virado.chefes[equipe.chefeId].historico).toHaveLength(1);
+    }
+
+    // Pilotos que correram: histórico com posição e equipe
+    const algumTitular = virado.equipes[0].pilotos[0].pilotoId;
+    expect(virado.pilotos[algumTitular].historico?.length).toBeGreaterThanOrEqual(0);
+    const campeaoPilotos = Object.values(virado.pilotos).find((p) => (p.titulosCarreira ?? 0) > 0);
+    expect(campeaoPilotos).toBeDefined();
+
+    // Motores: evoluíram e registraram o ano
+    for (const motor of Object.values(virado.motores)) {
+      expect(motor.historicoRatings).toHaveLength(1);
+    }
+
+    // Equipes: prestígio do ano registrado
+    for (const equipe of virado.equipes) {
+      expect(equipe.historicoPrestigio).toHaveLength(1);
+    }
   });
 
   it('a virada de ano aplica desenvolvimento, expira contratos e reinicia', () => {

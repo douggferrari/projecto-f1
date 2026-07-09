@@ -3,8 +3,10 @@
 // ============================================================================
 
 import type { ReactNode } from 'react';
+import { statusChefe } from '../engine/chefes';
+import { tendenciaMotor } from '../engine/motorCarreira';
 import { categoriaPiloto, faseCarreira } from '../engine/pilotoCarreira';
-import type { FaseCarreiraPiloto, Piloto, Pneu } from '../engine/tipos';
+import type { FaseCarreiraPiloto, Motor, Piloto, Pneu } from '../engine/tipos';
 
 export function Card(props: { titulo?: string; children: ReactNode; className?: string }) {
   return (
@@ -120,5 +122,33 @@ export function ListaErros({ erros }: { erros: string[] }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+/** Dica de tendência do fornecedor de motor (Fase 6): retrovisor, não bola de cristal. */
+export function TendenciaMotorBadge({ motor }: { motor: Motor }) {
+  const tendencia = tendenciaMotor(motor);
+  if (tendencia === 'subindo') {
+    return <span className="text-positivo" title="Em ascensão nos últimos anos">▲</span>;
+  }
+  if (tendencia === 'caindo') {
+    return <span className="text-negativo" title="Em queda nos últimos anos">▼</span>;
+  }
+  return <span className="text-mudo/60" title="Estável nos últimos anos">▬</span>;
+}
+
+/** Selo de status do chefe (Novato → Estabelecido → Consagrado → Lendário). */
+export function StatusChefeBadge({ campeonatos }: { campeonatos: number }) {
+  const status = statusChefe(campeonatos);
+  const cores: Record<string, string> = {
+    'Lendário': 'border-alerta/60 text-alerta',
+    'Consagrado': 'border-acento/60 text-acento',
+    'Estabelecido': 'border-positivo/50 text-positivo',
+    'Novato': 'border-borda text-mudo',
+  };
+  return (
+    <span className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${cores[status]}`}>
+      {status}{campeonatos > 0 ? ` · ${campeonatos}×` : ''}
+    </span>
   );
 }

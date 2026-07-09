@@ -34,9 +34,14 @@ function notaPiloto(p: Piloto): number {
  */
 export function aplicarGestaoIA(estado: EstadoJogo, catalogoBase: CatalogoJogo): EstadoJogo {
   const novo: EstadoJogo = structuredClone(estado);
-  // Pilotos vivos do estado (Fase 4); catálogo estático como fallback
+  // Pilotos e motores vivos do estado (Fases 4/6); catálogo como fallback
   const temPilotosVivos = novo.pilotos && Object.keys(novo.pilotos).length > 0;
-  const catalogo = temPilotosVivos ? { ...catalogoBase, pilotos: novo.pilotos } : catalogoBase;
+  const temMotoresVivos = novo.motores && Object.keys(novo.motores).length > 0;
+  const catalogo = {
+    ...catalogoBase,
+    pilotos: temPilotosVivos ? novo.pilotos : catalogoBase.pilotos,
+    motores: temMotoresVivos ? novo.motores : catalogoBase.motores,
+  };
   const livres = new Set(novo.pilotosLivres);
 
   // Pilotos com contrato vigente em QUALQUER equipe (não re-assinar quem saiu)
@@ -73,8 +78,13 @@ export function aplicarGestaoIA(estado: EstadoJogo, catalogoBase: CatalogoJogo):
       const outrosGastos = gastosFixos(equipe) - contrato.salarioAnual;
       const cabe = (salario: number) => outrosGastos + salario <= tetoGastosFixos;
       const aceita = (p: Piloto) =>
-        interessePiloto(p, equipe, { pilotoId: p.id, salarioAnual: p.salarioBase, duracaoAnos: 2 })
-          .aceita;
+        interessePiloto(
+          p,
+          equipe,
+          { pilotoId: p.id, salarioAnual: p.salarioBase, duracaoAnos: 2 },
+          undefined,
+          catalogo.patrocinadores[equipe.patrocinadorId] // Fase 6: a marca conta
+        ).aceita;
 
       const candidatos = [...livres]
         .map((id) => catalogo.pilotos[id])

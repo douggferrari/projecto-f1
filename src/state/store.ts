@@ -5,6 +5,7 @@
 // ============================================================================
 
 import { create } from 'zustand';
+import { CHEFES_INICIAIS } from '../data/chefes';
 import { ANO_INICIAL, EQUIPES_INICIAIS } from '../data/equipes';
 import {
   confirmarPreTemporada,
@@ -23,7 +24,7 @@ import type { EstadoJogo, TaticaCorrida } from '../engine/tipos';
 import { CALENDARIO_IDS, CATALOGO } from './catalogo';
 import { apagarSave, carregarJogo, salvarJogo } from './persistencia';
 
-export type Tela = 'sede' | 'escritorio' | 'mercado' | 'calendario' | 'campeonatos' | 'gp';
+export type Tela = 'sede' | 'escritorio' | 'mercado' | 'rankings' | 'calendario' | 'campeonatos' | 'gp';
 
 interface JogoStore {
   estado: EstadoJogo | null;
@@ -33,7 +34,7 @@ interface JogoStore {
   /** Resultado da última oferta de mercado (feedback na tela de mercado). */
   ultimaDecisaoMercado: { pilotoId: string; decisao?: DecisaoPiloto; erro?: string } | null;
 
-  novaCarreira: (equipeId: string) => void;
+  novaCarreira: (equipeId: string, nomeChefe?: string) => void;
   confirmarPreTemporada: (decisoes: DecisoesPreTemporada) => void;
   rodarClassificacao: () => void;
   definirTaticas: (taticas: [TaticaCorrida, TaticaCorrida]) => void;
@@ -55,9 +56,12 @@ export const useJogo = create<JogoStore>((set, get) => ({
   avisoSave: null,
   ultimaDecisaoMercado: null,
 
-  novaCarreira: (equipeId) => {
+  novaCarreira: (equipeId, nomeChefe) => {
     const seed = Math.floor(Math.random() * 2 ** 31);
-    const estado = criarCarreira(equipeId, seed, EQUIPES_INICIAIS, CALENDARIO_IDS, CATALOGO, ANO_INICIAL);
+    const estado = criarCarreira(
+      equipeId, seed, EQUIPES_INICIAIS, CALENDARIO_IDS, CATALOGO, ANO_INICIAL,
+      CHEFES_INICIAIS, nomeChefe?.trim() || 'Você'
+    );
     set({ estado, tela: 'sede', erros: [] });
   },
 

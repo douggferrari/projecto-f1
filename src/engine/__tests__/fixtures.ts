@@ -38,6 +38,7 @@ export function equipeTeste(
   return {
     id, nome: `Equipe ${id}`, tier: 'media', ehJogador: false,
     orcamentoBase: 50_000_000, reputacao: 50, prestigio: 60,
+    chefeId: `chefe-${id}`,
     corPrimaria: '#888888', corSecundaria: '#cccccc', nivelChassi,
     cicloDesenvolvimento: { anoDoCiclo: 1, investimentoAcumulado: 0 },
     contratoMotor: { motorId, duracaoAnos: 2, custoAnual: 1_000_000, anoInicio: 2026 },

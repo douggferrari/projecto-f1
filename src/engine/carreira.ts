@@ -18,8 +18,9 @@ import { validarOrcamento, formatarDinheiro } from './orcamento';
 import { salarioAnualPiloto } from './contratos';
 import { atualizarCampeonatos } from './pontuacao';
 import { criarRng, derivarSeed } from './rng';
+import { CHEFE_JOGADOR_ID } from './chefes';
 import { taticaValida } from './taticas';
-import type { Circuito, EstadoJogo, Equipe, ResultadoClassificacao, TaticaCorrida } from './tipos';
+import type { Chefe, Circuito, EstadoJogo, Equipe, ResultadoClassificacao, TaticaCorrida } from './tipos';
 
 /** Catálogo completo que o loop precisa (montado na camada de dados/state). */
 export interface CatalogoCompleto extends CatalogoJogo {
@@ -27,12 +28,19 @@ export interface CatalogoCompleto extends CatalogoJogo {
 }
 
 /**
- * Catálogo "vivo": os pilotos vêm do ESTADO (envelhecem, aposentam, novatos
- * surgem), o resto é estático. Todo caminho de simulação passa por aqui.
+ * Catálogo "vivo": pilotos E motores vêm do ESTADO (pilotos envelhecem,
+ * motores evoluem por temporada — Fase 6); o resto é estático.
+ * Todo caminho de simulação passa por aqui.
  */
 export function catalogoVivo<T extends CatalogoJogo>(estado: EstadoJogo, catalogo: T): T {
   const temPilotosVivos = estado.pilotos && Object.keys(estado.pilotos).length > 0;
-  return temPilotosVivos ? { ...catalogo, pilotos: estado.pilotos } : catalogo;
+  const temMotoresVivos = estado.motores && Object.keys(estado.motores).length > 0;
+  if (!temPilotosVivos && !temMotoresVivos) return catalogo;
+  return {
+    ...catalogo,
+    pilotos: temPilotosVivos ? estado.pilotos : catalogo.pilotos,
+    motores: temMotoresVivos ? estado.motores : catalogo.motores,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -45,7 +53,11 @@ export function criarCarreira(
   equipesIniciais: Equipe[],
   calendario: string[],
   catalogo: CatalogoCompleto,
-  anoInicial: number
+  anoInicial: number,
+  // Fase 6 (opcionais para compatibilidade): chefes da IA por equipeId e
+  // o nome do chefe do jogador
+  chefesIniciais?: Record<string, Omit<Chefe, 'historico'>>,
+  nomeChefeJogador = 'Você'
 ): EstadoJogo {
   const equipes = structuredClone(equipesIniciais);
   for (const e of equipes) e.ehJogador = e.id === equipeJogadorId;
@@ -53,6 +65,30 @@ export function criarCarreira(
   // Pilotos "vivos": cópia do catálogo para dentro do estado — a partir
   // daqui eles envelhecem, evoluem, aposentam e novatos são adicionados.
   const pilotos = structuredClone(catalogo.pilotos);
+  // Motores "vivos" (Fase 6): os ratings passam a evoluir por temporada
+  const motores = structuredClone(catalogo.motores);
+
+  // Chefes: um por equipe da IA + o do jogador (que assume a equipe escolhida)
+  const chefes: Record<string, Chefe> = {};
+  for (const equipe of equipes) {
+    if (equipe.id === equipeJogadorId) {
+      equipe.chefeId = CHEFE_JOGADOR_ID;
+      continue;
+    }
+    const semente = chefesIniciais?.[equipe.id];
+    const chefe: Chefe = semente
+      ? { ...semente, historico: [] }
+      : { id: equipe.chefeId, nome: `Chefe da ${equipe.nome}`, reputacao: 50, campeonatosVencidos: 0, historico: [] };
+    equipe.chefeId = chefe.id;
+    chefes[chefe.id] = chefe;
+  }
+  chefes[CHEFE_JOGADOR_ID] = {
+    id: CHEFE_JOGADOR_ID,
+    nome: nomeChefeJogador,
+    reputacao: 50,
+    campeonatosVencidos: 0,
+    historico: [],
+  };
 
   const estado: EstadoJogo = {
     ano: anoInicial,
@@ -66,6 +102,8 @@ export function criarCarreira(
     campeonatoConstrutores: {},
     historico: [],
     pilotos,
+    motores,
+    chefes,
     premiacaoAnterior: {}, // ano 1: sem premiação — todo mundo parte da receita-base
     investimentosAno: {},
     pilotosLivres: pilotosLivres(Object.values(pilotos), equipes, anoInicial),
@@ -141,6 +179,22 @@ export function confirmarPreTemporada(
     erros.push('A equipe está sem contrato de motor para a temporada.');
   }
 
+  // --- Patrocínio ANTES dos pilotos: a marca que a equipe estampa entra
+  // no interesse deles (prestígio efetivo — Fase 6) ---
+  const patrocinador = catalogo.patrocinadores[decisoes.patrocinadorId];
+  if (!patrocinador) {
+    erros.push('Escolha um patrocinador para a temporada.');
+  } else if (novo.patrocinadoresBloqueados.includes(patrocinador.id)) {
+    erros.push(`${patrocinador.nome} não renovou: a meta do ano passado não foi cumprida.`);
+  } else if (jogador.prestigio < patrocinador.prestigioMinimo) {
+    erros.push(
+      `${patrocinador.nome} exige uma equipe de prestígio ${patrocinador.prestigioMinimo} (a sua tem ${Math.round(jogador.prestigio)}).`
+    );
+  } else {
+    jogador.patrocinadorId = patrocinador.id;
+  }
+  const patrocinadorEfetivo = catalogo.patrocinadores[jogador.patrocinadorId];
+
   // --- Pilotos: oferta + decisão de interesse do piloto ---
   for (const contratacao of decisoes.pilotos ?? []) {
     const atual = jogador.pilotos[contratacao.slot];
@@ -155,11 +209,13 @@ export function confirmarPreTemporada(
     const piloto = catalogo.pilotos[contratacao.pilotoId];
     const salarioAnual =
       contratacao.salarioAnual ?? salarioAnualPiloto(piloto, contratacao.duracaoAnos);
-    const decisao = interessePiloto(piloto, jogador, {
-      pilotoId: piloto.id,
-      salarioAnual,
-      duracaoAnos: contratacao.duracaoAnos,
-    });
+    const decisao = interessePiloto(
+      piloto,
+      jogador,
+      { pilotoId: piloto.id, salarioAnual, duracaoAnos: contratacao.duracaoAnos },
+      undefined,
+      patrocinadorEfetivo
+    );
     if (!decisao.aceita) {
       erros.push(`${piloto.nome} recusou a oferta: ${decisao.motivo}`);
       continue;
@@ -176,20 +232,6 @@ export function confirmarPreTemporada(
     if (!contratoVigente(jogador.pilotos[slot], novo.ano)) {
       erros.push(`O assento ${slot + 1} está sem piloto contratado.`);
     }
-  }
-
-  // --- Patrocínio: o gate agora é o PRESTÍGIO da equipe ---
-  const patrocinador = catalogo.patrocinadores[decisoes.patrocinadorId];
-  if (!patrocinador) {
-    erros.push('Escolha um patrocinador para a temporada.');
-  } else if (novo.patrocinadoresBloqueados.includes(patrocinador.id)) {
-    erros.push(`${patrocinador.nome} não renovou: a meta do ano passado não foi cumprida.`);
-  } else if (jogador.prestigio < patrocinador.prestigioMinimo) {
-    erros.push(
-      `${patrocinador.nome} exige uma equipe de prestígio ${patrocinador.prestigioMinimo} (a sua tem ${Math.round(jogador.prestigio)}).`
-    );
-  } else {
-    jogador.patrocinadorId = patrocinador.id;
   }
 
   // --- Orçamento (regra dura; a rescisão de poach conta como gasto) ---
@@ -379,7 +421,13 @@ export function fazerOfertaPoach(
     e.pilotos.some((c) => c.pilotoId === oferta.pilotoId && contratoVigente(c, estado.ano))
   );
   const piloto = catalogo.pilotos[oferta.pilotoId];
-  const decisao = interessePiloto(piloto, jogador, oferta, equipeAtual);
+  const decisao = interessePiloto(
+    piloto,
+    jogador,
+    oferta,
+    equipeAtual,
+    catalogo.patrocinadores[jogador.patrocinadorId] // a marca atual pesa na conversa
+  );
   if (!decisao.aceita) return { estado, decisao };
 
   const novo: EstadoJogo = structuredClone(estado);

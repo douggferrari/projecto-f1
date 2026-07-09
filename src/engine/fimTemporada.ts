@@ -27,9 +27,11 @@ import {
   REPUTACAO_MINIMA_EMPREGO,
   REPUTACAO_POR_POSICAO,
 } from './constantes';
+import { atualizarChefes } from './chefes';
 import { contratoVigente, pilotosLivres } from './contratos';
 import { aplicarDesenvolvimento, limitar0a100 } from './desempenho';
 import type { CatalogoJogo } from './gestaoIA';
+import { evoluirMotores } from './motorCarreira';
 import { gastosFixos, receitaTemporada } from './orcamento';
 import {
   envelhecerPiloto,
@@ -271,8 +273,20 @@ export function aplicarViradaDeAno(
   // 3/4. Reputação do chefe e prestígio das equipes
   const jogador = novo.equipes.find((e) => e.id === novo.equipeJogadorId)!;
   jogador.reputacao = relatorio.jogador.reputacaoDepois;
+
+  // Chefes (Fase 6): histórico, títulos e reputação da IA — calculados com
+  // as expectativas do prestígio ANTES da atualização do ano
+  atualizarChefes(novo, relatorio.classificacao, expectativaPorPrestigio(novo.equipes));
+  const chefeJogador = novo.chefes[jogador.chefeId];
+  if (chefeJogador) chefeJogador.reputacao = relatorio.jogador.reputacaoDepois;
+
   for (const equipe of novo.equipes) {
     equipe.prestigio = relatorio.prestigio[equipe.id].depois;
+    // Registro para o ranking de avanço/recuo entre temporadas
+    equipe.historicoPrestigio = [
+      ...(equipe.historicoPrestigio ?? []),
+      { ano: novo.ano, prestigio: equipe.prestigio },
+    ];
   }
 
   // Meta de patrocínio falhada → sem renovação com este patrocinador
@@ -283,8 +297,24 @@ export function aplicarViradaDeAno(
 
   // 5. Pilotos: reputação por resultados, envelhecimento, aposentadoria, novatos
   const stats = estatisticasPilotos(novo);
-  const campeaoId = classificarCampeonato(novo.campeonatoPilotos)[0]?.id;
+  const posicoesPilotos = classificarCampeonato(novo.campeonatoPilotos);
+  const campeaoId = posicoesPilotos[0]?.id;
   const rngPilotos = criarRng(derivarSeed(novo.seed, novo.ano, 5));
+
+  // Histórico de temporada de cada piloto que correu (Fase 6)
+  for (const [indice, { id }] of posicoesPilotos.entries()) {
+    const piloto = novo.pilotos[id];
+    const equipeDele = novo.equipes.find((e) => e.pilotos.some((c) => c.pilotoId === id));
+    if (!piloto || !equipeDele) continue;
+    const campeao = id === campeaoId;
+    piloto.historico = [
+      ...(piloto.historico ?? []),
+      { ano: novo.ano, equipeId: equipeDele.id, posicaoCampeonato: indice + 1, campeao },
+    ];
+    piloto.titulosCarreira = (piloto.titulosCarreira ?? 0) + (campeao ? 1 : 0);
+    piloto.vitoriasCarreira = (piloto.vitoriasCarreira ?? 0) + (stats[id]?.vitorias ?? 0);
+    piloto.podiosCarreira = (piloto.podiosCarreira ?? 0) + (stats[id]?.podios ?? 0);
+  }
 
   for (const piloto of Object.values(novo.pilotos)) {
     if (piloto.aposentado) continue;
@@ -344,7 +374,15 @@ export function aplicarViradaDeAno(
     novo.equipeJogadorId = destino.id;
     novo.patrocinadoresBloqueados = [];
     novo.ofertaPendente = undefined; // a contratação pendente era da equipe antiga
+    // Os chefes trocam de cadeira (Fase 6): o chefe da equipe-destino
+    // assume a equipe que o jogador deixou
+    const chefeDeslocado = destino.chefeId;
+    destino.chefeId = jogador.chefeId;
+    jogador.chefeId = chefeDeslocado;
   }
+
+  // Motores evoluem para o ano novo (Fase 6) — random walk determinístico
+  novo.motores = evoluirMotores(novo.motores ?? {}, novo.ano, criarRng(derivarSeed(novo.seed, novo.ano, 8)));
 
   // 7. Contratos expirados → pool (aposentados nunca voltam ao pool)
   novo.pilotosLivres = pilotosLivres(

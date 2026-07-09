@@ -15,7 +15,7 @@ import { Botao, Card, CategoriaBadge, Estrelas, FaseBadge } from '../componentes
 export function Sede() {
   const { estado, irPara, simularTemporadaInteira } = useJogo();
   const jogador = estado!.equipes.find((e) => e.ehJogador)!;
-  const motor = CATALOGO.motores[jogador.contratoMotor.motorId];
+  const motor = estado!.motores[jogador.contratoMotor.motorId];
   const patrocinador = CATALOGO.patrocinadores[jogador.patrocinadorId];
 
   const classificacao = classificacaoConstrutores(estado!);
@@ -29,7 +29,7 @@ export function Sede() {
   const fixos = gastosFixos(jogador);
   const investido = estado!.investimentosAno[jogador.id] ?? 0;
   const saldoProjetado = receita - fixos - investido - estado!.custosIncidentesAno - estado!.custoRescisaoAno;
-  const estimativa = estimativaIncidentes(jogador, estado!.pilotos, CATALOGO.motores, estado!.calendario.length);
+  const estimativa = estimativaIncidentes(jogador, estado!.pilotos, estado!.motores, estado!.calendario.length);
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">

@@ -41,6 +41,8 @@ function estadoSintetico(pontos: Record<string, number>, reputacao = 50): Estado
     pilotos: Object.fromEntries(
       ['g1', 'g2', 'm1p', 'm2p', 'p1p', 'p2p'].map((id) => [id, pilotoTeste({ id })])
     ),
+    motores: {},
+    chefes: {},
     premiacaoAnterior: {},
     investimentosAno: {},
     pilotosLivres: [],
@@ -57,9 +59,9 @@ const catalogo: CatalogoJogo = {
     ['g1', 'g2', 'm1p', 'm2p', 'p1p', 'p2p'].map((id) => [id, pilotoTeste({ id })])
   ),
   patrocinadores: {
-    'pat-x': { id: 'pat-x', nome: 'Pat X', aporte: 10_000_000, prestigioMinimo: 0 },
+    'pat-x': { id: 'pat-x', nome: 'Pat X', aporte: 10_000_000, prestigioMinimo: 0, prestigio: 40 },
     'pat-meta': {
-      id: 'pat-meta', nome: 'Pat Meta', aporte: 20_000_000, prestigioMinimo: 0,
+      id: 'pat-meta', nome: 'Pat Meta', aporte: 20_000_000, prestigioMinimo: 0, prestigio: 40,
       meta: { posicaoConstrutoresMax: 2, bonus: 5_000_000 },
     },
   },

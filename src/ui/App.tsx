@@ -21,6 +21,7 @@ import { FimDeSemana } from './telas/FimDeSemana';
 import { FimTemporada } from './telas/FimTemporada';
 import { Mercado } from './telas/Mercado';
 import { NovaCarreira } from './telas/NovaCarreira';
+import { Rankings } from './telas/Rankings';
 import { Sede } from './telas/Sede';
 
 export default function App() {
@@ -44,6 +45,7 @@ export default function App() {
     { id: 'sede', nome: 'Sede' },
     { id: 'escritorio', nome: 'Escritório' },
     { id: 'mercado', nome: 'Mercado' },
+    { id: 'rankings', nome: 'Rankings' },
     { id: 'calendario', nome: 'Calendário' },
     { id: 'campeonatos', nome: 'Campeonatos' },
   ];
@@ -146,6 +148,7 @@ export default function App() {
             {telaAtiva === 'sede' && <Sede />}
             {telaAtiva === 'escritorio' && <Escritorio />}
             {telaAtiva === 'mercado' && <Mercado />}
+            {telaAtiva === 'rankings' && <Rankings />}
             {telaAtiva === 'calendario' && <Calendario />}
             {telaAtiva === 'campeonatos' && <Campeonatos />}
           </>

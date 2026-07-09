@@ -27,6 +27,7 @@ function equipe(
     reputacao: 50, prestigio, corPrimaria: cores[0], corSecundaria: cores[1], nivelChassi,
     cicloDesenvolvimento: { anoDoCiclo: 1, investimentoAcumulado: 0 },
     contratoMotor, pilotos, patrocinadorId,
+    chefeId: `chefe-${id.replace('eq-', '')}`, // casa com data/chefes.ts
   };
 }
 

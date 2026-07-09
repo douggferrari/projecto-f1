@@ -10,6 +10,7 @@
 // ============================================================================
 
 import {
+  BONUS_MAX_PATROCINIO,
   BONUS_SEM_VOLANTE,
   FATOR_AMBICAO_POR_FASE,
   FATOR_RESCISAO,
@@ -17,6 +18,7 @@ import {
   LIMIAR_ACEITE_DESCER_NO_AUGE,
   LIMIAR_ACEITE_EMPREGADO,
   LIMIAR_ACEITE_LIVRE,
+  PESO_PRESTIGIO_PATROCINIO,
   PESO_SALARIO_POR_FASE,
   POTENCIAL_ELITE,
   PRESTIGIO_MINIMO_JOVEM_ELITE,
@@ -24,7 +26,24 @@ import {
 } from './constantes';
 import { contratoVigente } from './contratos';
 import { faseCarreira, potencialOverall, salarioExigido } from './pilotoCarreira';
-import type { Equipe, EstadoJogo, Piloto } from './tipos';
+import type { Equipe, EstadoJogo, Patrocinador, Piloto } from './tipos';
+
+/**
+ * Prestígio EFETIVO de uma equipe aos olhos de um piloto (Fase 6):
+ * o prestígio da equipe + um bônus limitado pelo prestígio da marca que a
+ * patrocina. Uma grife de herança valoriza o projeto; dinheiro novo não.
+ * O teto do bônus garante que patrocínio nenhum transforma um fundo de
+ * grid em destino de jovem craque (35 + 12 < gate de 62).
+ */
+export function prestigioEfetivo(
+  prestigioEquipe: number,
+  patrocinador?: Pick<Patrocinador, 'prestigio'>
+): number {
+  const bonus = patrocinador
+    ? Math.min(BONUS_MAX_PATROCINIO, patrocinador.prestigio * PESO_PRESTIGIO_PATROCINIO)
+    : 0;
+  return prestigioEquipe + bonus;
+}
 
 export interface Oferta {
   pilotoId: string;
@@ -67,16 +86,20 @@ export function interessePiloto(
   piloto: Piloto,
   equipeOfertante: Pick<Equipe, 'prestigio'>,
   oferta: Oferta,
-  equipeAtual?: Pick<Equipe, 'prestigio'>
+  equipeAtual?: Pick<Equipe, 'prestigio'>,
+  patrocinadorOfertante?: Pick<Patrocinador, 'prestigio'>
 ): DecisaoPiloto {
   const fase = faseCarreira(piloto.idade);
   const potencial = potencialOverall(piloto);
+  // Fase 6: o patrocinador da equipe ofertante entra como bônus LIMITADO
+  const prestigioOferta = prestigioEfetivo(equipeOfertante.prestigio, patrocinadorOfertante);
 
-  // Regra dura: jovem de elite não desce para projeto pequeno por dinheiro
+  // Regra dura: jovem de elite não desce para projeto pequeno por dinheiro.
+  // O bônus de patrocínio é limitado de propósito para não furar este gate.
   if (
     fase === 'subindo' &&
     potencial >= POTENCIAL_ELITE &&
-    equipeOfertante.prestigio < PRESTIGIO_MINIMO_JOVEM_ELITE
+    prestigioOferta < PRESTIGIO_MINIMO_JOVEM_ELITE
   ) {
     return {
       aceita: false,
@@ -89,7 +112,7 @@ export function interessePiloto(
   const pesoPrestigio = 1 - pesoSalario;
   const ambicaoEfetiva = potencial * FATOR_AMBICAO_POR_FASE[fase];
 
-  const scorePrestigio = (equipeOfertante.prestigio - (ambicaoEfetiva - FOLGA_AMBICAO)) / 25;
+  const scorePrestigio = (prestigioOferta - (ambicaoEfetiva - FOLGA_AMBICAO)) / 25;
   const razaoSalario = oferta.salarioAnual / salarioExigido(piloto) - 1;
   const scoreSalario = Math.min(TETO_SCORE_SALARIO, razaoSalario);
 
@@ -98,7 +121,7 @@ export function interessePiloto(
   if (!empregado) score += BONUS_SEM_VOLANTE;
 
   // Piloto no auge raramente aceita DESCER de prestígio
-  const descendo = empregado && equipeOfertante.prestigio < equipeAtual.prestigio - 3;
+  const descendo = empregado && prestigioOferta < equipeAtual.prestigio - 3;
   const limiar = !empregado
     ? LIMIAR_ACEITE_LIVRE
     : fase === 'auge' && descendo

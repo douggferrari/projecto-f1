@@ -10,6 +10,7 @@
 // ============================================================================
 
 import { CALENDARIO, CIRCUITOS_POR_ID } from '../src/data/calendario';
+import { CHEFES_INICIAIS } from '../src/data/chefes';
 import { ANO_INICIAL, EQUIPES_INICIAIS } from '../src/data/equipes';
 import { MOTORES_POR_ID } from '../src/data/motores';
 import { PATROCINADORES, PATROCINADORES_POR_ID } from '../src/data/patrocinadores';
@@ -24,8 +25,10 @@ import {
   type CatalogoCompleto,
   type DecisoesPreTemporada,
 } from '../src/engine/carreira';
+import { rankingChefes, statusChefe } from '../src/engine/chefes';
 import { contratoVigente } from '../src/engine/contratos';
 import { gerarRelatorioFimTemporada, aplicarViradaDeAno } from '../src/engine/fimTemporada';
+import { tendenciaMotor } from '../src/engine/motorCarreira';
 import { estimativaIncidentes } from '../src/engine/incidentes';
 import { interessePiloto } from '../src/engine/mercado';
 import { gastosFixos, receitaTemporada, formatarDinheiro } from '../src/engine/orcamento';
@@ -154,7 +157,7 @@ interface ResumoCarreira {
 }
 
 function simularCarreira(fatorReserva: FatorReserva, seed: number): ResumoCarreira {
-  let estado = criarCarreira(EQUIPE_INICIAL, seed, EQUIPES_INICIAIS, calendarioIds, catalogo, ANO_INICIAL);
+  let estado = criarCarreira(EQUIPE_INICIAL, seed, EQUIPES_INICIAIS, calendarioIds, catalogo, ANO_INICIAL, CHEFES_INICIAIS);
   const resumo: ResumoCarreira = { posicoes: [], demissoes: 0, encerrada: false, prestigioFinal: 0 };
 
   for (let temporada = 0; temporada < N_TEMPORADAS; temporada++) {
@@ -246,7 +249,7 @@ console.log(`  Jovem 24 anos, reputação 30, overall atual ${overallJov} (exige
 
 console.log('\n=== 3. PIPELINE — grid vivo ao longo de 12 temporadas (seed 0, perfil prudente) ===');
 {
-  let estado = criarCarreira(EQUIPE_INICIAL, 0, EQUIPES_INICIAIS, calendarioIds, catalogo, ANO_INICIAL);
+  let estado = criarCarreira(EQUIPE_INICIAL, 0, EQUIPES_INICIAIS, calendarioIds, catalogo, ANO_INICIAL, CHEFES_INICIAIS);
   console.log('Ano  | ativos | aposentados | novatos no pool | promessas (pot ≥ 82, <25 anos) | idade média');
   for (let temporada = 0; temporada < N_TEMPORADAS; temporada++) {
     const r = confirmarPreTemporada(estado, decidirPreTemporada(estado, 1), catalogo);
@@ -266,6 +269,44 @@ console.log('\n=== 3. PIPELINE — grid vivo ao longo de 12 temporadas (seed 0, 
     estado = aplicarViradaDeAno(estado, catalogo);
     if (estado.fase === 'fim-carreira') break;
     estado = iniciarPreTemporada(estado, catalogo);
+  }
+
+  // -------------------------------------------------------------------------
+  // 4) Fase 6 — motores que evoluem (na MESMA carreira de 12 temporadas)
+  // -------------------------------------------------------------------------
+  console.log('\n=== 4. MOTORES — evolução em 12 temporadas (seed 0) ===');
+  console.log('Fornecedor            | pot 2026 → hoje | Δ     | conf 2026 → hoje | tendência');
+  for (const id of Object.keys(estado.motores).sort()) {
+    const motor = estado.motores[id];
+    const inicial = catalogo.motores[id];
+    const delta = motor.potencia - inicial.potencia;
+    const seta = { subindo: '▲', estavel: '▬', caindo: '▼' }[tendenciaMotor(motor)];
+    console.log(
+      `${motor.nome.padEnd(21)} | ${String(inicial.potencia).padStart(8)} → ${String(motor.potencia).padStart(4)} | ${(delta >= 0 ? '+' : '') + delta.toFixed(1).padStart(4)} | ${String(inicial.confiabilidade).padStart(9)} → ${String(motor.confiabilidade).padStart(4)} | ${seta}`
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // 5) Fase 6 — ranking de chefes após 12 temporadas
+  // -------------------------------------------------------------------------
+  console.log('\n=== 5. CHEFES — ranking de reputação após 12 temporadas (seed 0) ===');
+  for (const chefe of rankingChefes(estado.chefes).slice(0, 10)) {
+    const equipe = estado.equipes.find((e) => e.chefeId === chefe.id);
+    const ultima = chefe.historico.at(-1);
+    console.log(
+      `${chefe.nome.padEnd(20)} rep ${String(Math.round(chefe.reputacao)).padStart(3)} | ${String(chefe.campeonatosVencidos)} título(s) → ${statusChefe(chefe.campeonatosVencidos).padEnd(12)} | ${equipe?.nome ?? '—'}${ultima ? ` | último ano: P${ultima.posicaoConstrutores}` : ''}`
+    );
+  }
+
+  // Amostra de histórico de um piloto de ponta
+  const comTitulos = Object.values(estado.pilotos)
+    .filter((p) => (p.historico?.length ?? 0) > 0)
+    .sort((a, b) => (b.titulosCarreira ?? 0) - (a.titulosCarreira ?? 0))[0];
+  if (comTitulos) {
+    console.log(`\nHistórico de ${comTitulos.nome} (${comTitulos.titulosCarreira ?? 0} título(s), ${comTitulos.vitoriasCarreira ?? 0} vitórias):`);
+    for (const t of (comTitulos.historico ?? []).slice(-6)) {
+      console.log(`  ${t.ano}: P${t.posicaoCampeonato}${t.campeao ? ' 🏆' : ''} (${t.equipeId})`);
+    }
   }
 }
 console.log();

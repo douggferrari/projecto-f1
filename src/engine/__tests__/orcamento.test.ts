@@ -10,7 +10,7 @@ import { equipeTeste } from './fixtures';
 import type { Patrocinador } from '../tipos';
 
 const patrocinadores: Record<string, Patrocinador> = {
-  'pat-x': { id: 'pat-x', nome: 'Pat X', aporte: 10_000_000, prestigioMinimo: 0 },
+  'pat-x': { id: 'pat-x', nome: 'Pat X', aporte: 10_000_000, prestigioMinimo: 0, prestigio: 40 },
 };
 
 // equipeTeste: orcamentoBase 50M, motor 1M/ano, 2 pilotos de 1M/ano

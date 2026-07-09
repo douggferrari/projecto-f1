@@ -16,6 +16,11 @@ do fundo do grid até o topo.
       e safety car (comprime o pelotão), ambos desligáveis via `EVENTOS_ATIVADOS`;
       ponto de volta mais rápida (top 10). Com eventos desligados, a corrida é
       bit-idêntica à da Fase 4 (testado).
+- [x] **Fase 6** — Prestígio de patrocinador como ímã de pilotos (bônus limitado —
+      não fura o gate do jovem elite), motores que evoluem por temporada (random
+      walk determinístico com reversão à média + dica de tendência ▲▬▼), chefes
+      com títulos e escada até Lendário (3+), históricos de chefe/piloto/prestígio
+      e a aba Rankings.
 
 ## Comandos
 

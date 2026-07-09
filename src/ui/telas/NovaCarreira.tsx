@@ -1,5 +1,6 @@
-// Tela de nova carreira: escolher uma equipe pequena para começar.
+// Tela de nova carreira: nome do chefe + escolher uma equipe pequena.
 
+import { useState } from 'react';
 import { EQUIPES_INICIAIS } from '../../data/equipes';
 import { CATALOGO } from '../../state/catalogo';
 import { useJogo } from '../../state/store';
@@ -9,6 +10,7 @@ import { Botao, Card, Estrelas } from '../componentes';
 
 export function NovaCarreira() {
   const { novaCarreira, carregar } = useJogo();
+  const [nomeChefe, setNomeChefe] = useState('');
   const pequenas = EQUIPES_INICIAIS.filter((e) => e.tier === 'pequena');
 
   return (
@@ -20,7 +22,19 @@ export function NovaCarreira() {
         invista no carro e suba na classificação — as equipes grandes estão de olho.
       </p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      <label className="mt-6 block max-w-xs">
+        <span className="rotulo">Seu nome (chefe de equipe)</span>
+        <input
+          type="text"
+          value={nomeChefe}
+          onChange={(e) => setNomeChefe(e.target.value)}
+          placeholder="Ex.: Doug Ferrari"
+          maxLength={30}
+          className="mt-1 w-full rounded border border-borda bg-superficie px-3 py-2 text-sm placeholder:text-mudo/50"
+        />
+      </label>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {pequenas.map((equipe) => {
           const motor = CATALOGO.motores[equipe.contratoMotor.motorId];
           const [p1, p2] = equipe.pilotos.map((c) => CATALOGO.pilotos[c.pilotoId]);
@@ -44,7 +58,7 @@ export function NovaCarreira() {
                 <dt className="text-mudo">Pilotos</dt>
                 <dd className="text-right">{p1.nome} · {p2.nome}</dd>
               </dl>
-              <Botao onClick={() => novaCarreira(equipe.id)} className="mt-auto">
+              <Botao onClick={() => novaCarreira(equipe.id, nomeChefe)} className="mt-auto">
                 Assumir equipe
               </Botao>
             </Card>

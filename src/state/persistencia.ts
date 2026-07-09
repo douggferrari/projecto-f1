@@ -6,9 +6,9 @@
 
 import type { EstadoJogo } from '../engine/tipos';
 
-// v2: Fase 4 mudou o shape do estado (pilotos vivos, finanças) — saves v1
-// não são compatíveis e são ignorados na carga.
-export const CHAVE_SAVE = 'projecto-f1:save:v2';
+// v3: Fase 6 mudou o shape do estado (motores vivos, chefes, históricos) —
+// saves anteriores não são compatíveis e são ignorados na carga.
+export const CHAVE_SAVE = 'projecto-f1:save:v3';
 
 function temLocalStorage(): boolean {
   return typeof localStorage !== 'undefined';
@@ -37,7 +37,9 @@ export function carregarJogo(): EstadoJogo | null {
       typeof estado.ano !== 'number' ||
       !Array.isArray(estado.equipes) ||
       !estado.equipeJogadorId ||
-      typeof estado.pilotos !== 'object'
+      typeof estado.pilotos !== 'object' ||
+      typeof estado.motores !== 'object' ||
+      typeof estado.chefes !== 'object'
     ) {
       return null;
     }

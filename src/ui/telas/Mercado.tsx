@@ -11,8 +11,10 @@ import { anosRestantes } from '../../engine/contratos';
 import { equipeDoPiloto, interessePiloto, validarPoach } from '../../engine/mercado';
 import { overallAtual, salarioExigido } from '../../engine/pilotoCarreira';
 import type { Piloto } from '../../engine/tipos';
+import { CATALOGO } from '../../state/catalogo';
 import { useJogo } from '../../state/store';
 import { formatarDinheiro } from '../formatar';
+import { nomeEquipe } from '../nomes';
 import { Botao, Card, CategoriaBadge, CorEquipe, FaseBadge } from '../componentes';
 
 export function Mercado() {
@@ -39,8 +41,12 @@ export function Mercado() {
   const oferta = alvo
     ? { pilotoId: alvo.id, salarioAnual: Math.round((salarioExigido(alvo) * fatorSalario) / 100_000) * 100_000, duracaoAnos: duracao }
     : null;
-  // Prévia do interesse (a mesma função que decide de verdade)
-  const previa = alvo && oferta ? interessePiloto(alvo, jogador, oferta, equipeDoAlvo) : null;
+  // Prévia do interesse (a mesma função que decide de verdade) — a marca
+  // do patrocinador do jogador entra na conta (Fase 6)
+  const marcaDoJogador = CATALOGO.patrocinadores[jogador.patrocinadorId];
+  const previa = alvo && oferta
+    ? interessePiloto(alvo, jogador, oferta, equipeDoAlvo, marcaDoJogador)
+    : null;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
@@ -115,6 +121,8 @@ export function Mercado() {
                   <FaseBadge idade={alvo.idade} />
                 </p>
               </div>
+
+              <HistoricoPiloto piloto={alvo} />
 
               {equipeDoAlvo?.ehJogador ? (
                 <p className="text-mudo">Já é da sua equipe.</p>
@@ -199,15 +207,46 @@ export function Mercado() {
   );
 }
 
+/** Histórico de carreira do piloto (Fase 6): temporadas, títulos, vitórias. */
+export function HistoricoPiloto({ piloto }: { piloto: Piloto }) {
+  const historico = piloto.historico ?? [];
+  return (
+    <div className="rounded border border-borda p-2">
+      <p className="rotulo mb-1.5">Carreira</p>
+      <p className="num text-xs text-mudo">
+        {piloto.titulosCarreira ?? 0} título(s) · {piloto.vitoriasCarreira ?? 0} vitória(s) ·{' '}
+        {piloto.podiosCarreira ?? 0} pódio(s)
+      </p>
+      {historico.length === 0 ? (
+        <p className="mt-1 text-xs text-mudo">Primeira temporada no grid.</p>
+      ) : (
+        <ul className="mt-1.5 flex flex-col gap-0.5 text-xs">
+          {[...historico].slice(-6).reverse().map((t) => (
+            <li key={t.ano} className="flex items-center gap-2">
+              <span className="num w-10 text-mudo">{t.ano}</span>
+              <span className={`num w-8 font-semibold ${t.campeao ? 'text-alerta' : ''}`}>
+                P{t.posicaoCampeonato}{t.campeao ? ' 🏆' : ''}
+              </span>
+              <span className="truncate text-mudo">{nomeEquipe(t.equipeId)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /** Para pilotos livres: mostra se ele aceitaria a sua equipe hoje. */
 function PreviaLivre({ alvo }: { alvo: Piloto }) {
   const { estado, irPara } = useJogo();
   const jogador = estado!.equipes.find((e) => e.ehJogador)!;
-  const previa = interessePiloto(alvo, jogador, {
-    pilotoId: alvo.id,
-    salarioAnual: salarioExigido(alvo),
-    duracaoAnos: 2,
-  });
+  const previa = interessePiloto(
+    alvo,
+    jogador,
+    { pilotoId: alvo.id, salarioAnual: salarioExigido(alvo), duracaoAnos: 2 },
+    undefined,
+    CATALOGO.patrocinadores[jogador.patrocinadorId]
+  );
   return (
     <>
       <p className={previa.aceita ? 'text-positivo' : 'text-alerta'}>

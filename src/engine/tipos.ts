@@ -17,6 +17,11 @@ export interface Motor {
   potencia: number;       // 0-100
   confiabilidade: number; // 0-100
   custoAnualBase: number; // em $ do jogo
+  // --- Evolução do fornecedor (Fase 6; presente nos motores "vivos" do estado) ---
+  /** Drift anual oculto do random walk — a trajetória do fornecedor. */
+  tendencia?: number;
+  /** Ratings de cada temporada passada (alimenta o ranking e a dica ▲▬▼). */
+  historicoRatings?: { ano: number; potencia: number; confiabilidade: number }[];
 }
 
 export type FaseCarreiraPiloto = 'subindo' | 'auge' | 'declinio' | 'veterano';
@@ -39,6 +44,38 @@ export interface Piloto {
   // persiste com a idade — puxa o salário (nome grande custa caro).
   reputacao: number;
   aposentado?: boolean;
+  // --- Histórico de carreira (Fase 6) ---
+  historico?: TemporadaPiloto[];
+  titulosCarreira?: number;
+  vitoriasCarreira?: number;
+  podiosCarreira?: number;
+}
+
+/** Uma temporada na carreira de um piloto. */
+export interface TemporadaPiloto {
+  ano: number;
+  equipeId: string;
+  posicaoCampeonato: number;
+  campeao: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Chefes de equipe (Fase 6) — o jogador é um deles
+// ---------------------------------------------------------------------------
+
+export interface TemporadaChefe {
+  ano: number;
+  equipeId: string;
+  posicaoConstrutores: number;
+  campeao: boolean;
+}
+
+export interface Chefe {
+  id: string;
+  nome: string;
+  reputacao: number;           // evolui pelos resultados (IA e jogador)
+  campeonatosVencidos: number; // títulos de construtores — escada de status
+  historico: TemporadaChefe[];
 }
 
 export interface Patrocinador {
@@ -48,6 +85,10 @@ export interface Patrocinador {
   // Patrocinadores grandes exigem uma equipe de prestígio — impede a
   // equipe pequena de assinar o maior aporte no ano 1.
   prestigioMinimo: number;
+  // Prestígio da MARCA (0-100): ajuda a atrair pilotos (Fase 6). Uma grife
+  // de herança pode pagar pouco e ainda assim valorizar o projeto; dinheiro
+  // novo paga muito e não impressiona ninguém.
+  prestigio: number;
   // Meta: posição máxima no construtores. Cumprir dá bônus (receita do ano
   // seguinte); falhar bloqueia a renovação com este patrocinador por 1 ano.
   meta?: { posicaoConstrutoresMax: number; bonus: number };
@@ -108,6 +149,10 @@ export interface Equipe {
   contratoMotor: ContratoMotor;
   pilotos: [ContratoPiloto, ContratoPiloto];
   patrocinadorId: string;
+  // --- Fase 6 ---
+  chefeId: string; // chefe atual (o do jogador troca junto com ele)
+  /** Prestígio ao fim de cada temporada — mostra avanço/recuo entre anos. */
+  historicoPrestigio?: { ano: number; prestigio: number }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -182,6 +227,10 @@ export interface EstadoJogo {
   historico: ResultadoGP[];                       // GPs da temporada corrente
   // --- pilotos vivos (Fase 4): envelhecem, evoluem, aposentam, surgem ---
   pilotos: Record<string, Piloto>;
+  // --- motores vivos (Fase 6): ratings evoluem por random walk anual ---
+  motores: Record<string, Motor>;
+  // --- chefes de equipe (Fase 6): reputação, títulos e histórico ---
+  chefes: Record<string, Chefe>;
   // --- gestão da temporada ---
   premiacaoAnterior: Record<string, number>; // equipeId -> receita de premiação/bônus
   investimentosAno: Record<string, number>;  // equipeId -> investimento em dev nesta temporada

@@ -349,6 +349,56 @@ export const MARGEM_FINAL_SC = 8;                 // ...nem nas últimas voltas
 export const PONTOS_VOLTA_MAIS_RAPIDA = 1;
 export const POSICAO_MAXIMA_PONTO_VMR = 10;
 
+// ===========================================================================
+// FASE 6 — Prestígio de patrocinador, evolução de motores, chefes e status.
+// Nada abaixo desta linha afeta a simulação de corrida.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Prestígio do patrocinador como ímã de pilotos (Bloco A).
+// prestigioEfetivo = prestigioEquipe
+//                  + min(BONUS_MAX_PATROCINIO, patrocinador.prestigio × PESO)
+// O bônus AJUDA mas não fura a regra dura: com BONUS_MAX = 12, uma equipe
+// 1-estrela (prestígio ~35) chega no máximo a 47 — ainda abaixo do gate do
+// jovem elite (62). Já uma intermediária (52) alcança 64 e passa a disputar
+// pilotos que estariam fora do alcance.
+// ---------------------------------------------------------------------------
+export const PESO_PRESTIGIO_PATROCINIO = 0.15;
+export const BONUS_MAX_PATROCINIO = 12;
+
+// ---------------------------------------------------------------------------
+// Evolução dos motores (Bloco B): random walk determinístico com reversão
+// à média. Cada fornecedor carrega uma TENDÊNCIA oculta (drift anual) que
+// persiste entre anos e muda devagar — é ela que cria trajetórias de
+// "subindo/estável/caindo" sem ninguém disparar para 100 nem desabar.
+//   tendencia' = clamp(tendencia × PERSISTENCIA + ruído, ±TENDENCIA_MAX)
+//   rating'    = clamp(rating + tendencia' + REVERSAO × (CENTRO − rating), MIN..MAX)
+// ---------------------------------------------------------------------------
+export const MOTOR_TENDENCIA_MAX = 2.2;        // drift máximo por ano (pontos)
+export const MOTOR_PERSISTENCIA_TENDENCIA = 0.7; // memória da trajetória
+export const MOTOR_RUIDO_TENDENCIA = 1.0;      // quanto a trajetória muda por ano
+export const MOTOR_REVERSAO_MEDIA = 0.06;      // força que puxa para o centro
+export const MOTOR_CENTRO_POTENCIA = 80;
+export const MOTOR_CENTRO_CONFIABILIDADE = 82;
+export const MOTOR_POTENCIA_MINIMA = 60;
+export const MOTOR_POTENCIA_MAXIMA = 97;
+export const MOTOR_CONF_MINIMA = 62;
+export const MOTOR_CONF_MAXIMA = 96;
+// Dica de tendência na UI (▲/▬/▼): variação da potência nos últimos 2 anos
+export const LIMIAR_TENDENCIA_VISIVEL = 1.5;
+
+// ---------------------------------------------------------------------------
+// Chefes de equipe (Bloco C): reputação da IA evolui como a do jogador
+// (expectativa = ranking de prestígio) e títulos de construtores sobem a
+// escada de status — Lendário com 3 ou mais campeonatos.
+// ---------------------------------------------------------------------------
+export const STATUS_CHEFE: { minimo: number; nome: string }[] = [
+  { minimo: 3, nome: 'Lendário' },
+  { minimo: 2, nome: 'Consagrado' },
+  { minimo: 1, nome: 'Estabelecido' },
+  { minimo: 0, nome: 'Novato' },
+];
+
 // Eficiência de investimento da IA: fração do resíduo que vira de fato
 // desenvolvimento (o resto é desperdício de gestão). É a vantagem
 // estrutural de um bom chefe humano sobre a burocracia dos rivais — sem
