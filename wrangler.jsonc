@@ -1,0 +1,11 @@
+{
+  // Configuração do Cloudflare Workers (hospedagem do PWA como assets
+  // estáticos — sem código de servidor; o jogo é 100% client-side).
+  "name": "projecto-f1",
+  "compatibility_date": "2026-07-01",
+  "assets": {
+    "directory": "./dist",
+    // SPA: qualquer rota desconhecida devolve o index.html
+    "not_found_handling": "single-page-application"
+  }
+}
